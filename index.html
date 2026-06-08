@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1f4f8f">
+  <title>OficinaPro OS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <section id="loginView" class="login-page">
+      <div class="login-card">
+        <div class="brand">
+          <div class="brand-mark">OP</div>
+          <div>
+            <h1>OficinaPro OS</h1>
+            <p>Gestão de ordens de serviço</p>
+          </div>
+        </div>
+        <form id="loginForm">
+          <label>E-mail
+            <input id="loginEmail" type="email" autocomplete="username" value="admin@oficina.com" required>
+          </label>
+          <label>Senha
+            <input id="loginSenha" type="password" autocomplete="current-password" value="admin123" required>
+          </label>
+          <button class="btn primary full" type="submit">Entrar</button>
+          <p class="hint">Usuário inicial: <b>admin@oficina.com</b> / <b>admin123</b></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="mainView" class="shell hidden">
+      <aside class="sidebar">
+        <div class="brand small">
+          <div class="brand-mark">OP</div>
+          <div>
+            <h1>OficinaPro</h1>
+            <p id="empresaNome">Oficina Modelo</p>
+          </div>
+        </div>
+        <nav id="navTabs">
+          <button data-tab="dashboard" class="active">Dashboard</button>
+          <button data-tab="ordens">Ordens de Serviço</button>
+          <button data-tab="clientes">Clientes</button>
+          <button data-tab="veiculos">Veículos</button>
+          <button data-tab="servicos">Serviços</button>
+          <button data-tab="pecas">Peças / Estoque</button>
+          <button data-tab="comissoes">Comissões</button>
+          <button data-tab="logs">Logs</button>
+          <button data-tab="usuarios">Usuários</button>
+          <button data-tab="config">Configurações</button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <button id="mobileMenu" class="icon-btn" aria-label="Menu">☰</button>
+          <div>
+            <h2 id="screenTitle">Dashboard</h2>
+            <p id="screenSubtitle">Visão geral da oficina</p>
+          </div>
+          <div class="top-actions">
+            <span id="currentUserBadge" class="badge"></span>
+            <button id="btnLogout" class="btn ghost">Sair</button>
+          </div>
+        </header>
+
+        <section id="tab-dashboard" class="tab active">
+          <div class="grid cards">
+            <article class="card stat">
+              <span>OS abertas</span>
+              <strong id="statAbertas">0</strong>
+            </article>
+            <article class="card stat">
+              <span>Aguardando aprovação</span>
+              <strong id="statAguardando">0</strong>
+            </article>
+            <article class="card stat">
+              <span>Faturamento do mês</span>
+              <strong id="statFaturamento">R$ 0,00</strong>
+            </article>
+            <article class="card stat">
+              <span>Ticket médio</span>
+              <strong id="statTicket">R$ 0,00</strong>
+            </article>
+          </div>
+          <div class="grid two">
+            <article class="card">
+              <div class="card-head">
+                <h3>OS recentes</h3>
+                <button class="btn small" data-tab-shortcut="ordens">Ver todas</button>
+              </div>
+              <div id="recentOs"></div>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <h3>Alertas de estoque</h3>
+                <button class="btn small" data-tab-shortcut="pecas">Ver peças</button>
+              </div>
+              <div id="stockAlerts"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="tab-ordens" class="tab">
+          <div class="toolbar">
+            <div class="search-box">
+              <input id="filtroOs" placeholder="Buscar por cliente, veículo, placa ou número">
+            </div>
+            <button class="btn primary" id="btnNovaOs">+ Nova OS</button>
+          </div>
+          <div id="listaOs" class="list"></div>
+        </section>
+
+        <section id="tab-clientes" class="tab">
+          <div class="toolbar">
+            <input id="filtroCliente" placeholder="Buscar cliente">
+            <button class="btn primary" id="btnNovoCliente">+ Cliente</button>
+          </div>
+          <div id="listaClientes" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-veiculos" class="tab">
+          <div class="toolbar">
+            <input id="filtroVeiculo" placeholder="Buscar placa, modelo ou cliente">
+            <button class="btn primary" id="btnNovoVeiculo">+ Veículo</button>
+          </div>
+          <div class="notice">
+            Integração SENATRAN está desativada neste MVP. O cadastro é manual, mas os campos de placa, chassi e Renavam já estão preparados.
+          </div>
+          <div id="listaVeiculos" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-servicos" class="tab">
+          <div class="toolbar">
+            <input id="filtroServico" placeholder="Buscar serviço">
+            <button class="btn primary" id="btnNovoServico">+ Serviço</button>
+          </div>
+          <div id="listaServicos" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-pecas" class="tab">
+          <div class="toolbar">
+            <input id="filtroPeca" placeholder="Buscar peça ou SKU">
+            <button class="btn primary" id="btnNovaPeca">+ Peça</button>
+          </div>
+          <div id="listaPecas" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-comissoes" class="tab">
+          <div class="toolbar">
+            <select id="filtroMesComissao"></select>
+            <button class="btn" id="btnExportComissao">Exportar CSV</button>
+          </div>
+          <div id="relatorioComissoes" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-logs" class="tab">
+          <div class="toolbar">
+            <input id="filtroLog" placeholder="Buscar por ação, entidade ou usuário">
+            <button class="btn danger" id="btnLimparLogs">Limpar logs</button>
+          </div>
+          <div id="listaLogs" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-usuarios" class="tab">
+          <div class="toolbar">
+            <input id="filtroUsuario" placeholder="Buscar usuário">
+            <button class="btn primary" id="btnNovoUsuario">+ Usuário</button>
+          </div>
+          <div id="listaUsuarios" class="table-wrap"></div>
+        </section>
+
+        <section id="tab-config" class="tab">
+          <article class="card">
+            <h3>Dados da oficina</h3>
+            <form id="formConfig" class="form-grid">
+              <label>Nome fantasia
+                <input name="nomeFantasia" required>
+              </label>
+              <label>CNPJ
+                <input name="cnpj">
+              </label>
+              <label>Telefone
+                <input name="telefone">
+              </label>
+              <label>E-mail
+                <input name="email" type="email">
+              </label>
+              <label class="full">Endereço
+                <input name="endereco">
+              </label>
+              <label>Garantia padrão em dias
+                <input name="garantiaPadraoDias" type="number" min="0">
+              </label>
+              <label>Comissão padrão %
+                <input name="comissaoPadrao" type="number" min="0" step="0.01">
+              </label>
+              <button class="btn primary" type="submit">Salvar configurações</button>
+            </form>
+          </article>
+          <article class="card">
+            <h3>Banco de dados e backup</h3>
+            <p id="storageStatus" class="hint">Carregando modo de persistência...</p>
+            <p class="hint">Com o Firebase configurado, os dados são gravados no Cloud Firestore. Sem configuração, o sistema usa LocalStorage apenas para teste local.</p>
+            <div class="row">
+              <button id="btnExportBackup" class="btn">Exportar JSON</button>
+              <label class="btn ghost file-label">Importar JSON
+                <input id="inputImportBackup" type="file" accept="application/json">
+              </label>
+              <button id="btnResetDemo" class="btn danger">Restaurar base demo</button>
+            </div>
+          </article>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modalTitle">Modal</h3>
+        <button id="modalClose" class="icon-btn">×</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
