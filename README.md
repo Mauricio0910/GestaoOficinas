@@ -112,3 +112,16 @@ Use `firestore.dev.rules` apenas para testes controlados.
 
 A integração SENATRAN/SERPRO segue desativada nesta versão.  
 A modelagem já deixa espaço para adicionar futuramente a coleção `consultas_veiculares`.
+
+
+## Correção rápida: Firestore `Missing or insufficient permissions`
+
+Se aparecer `FirebaseError: Missing or insufficient permissions`, publique as regras de teste:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Ou cole manualmente no Firebase Console o conteúdo de `firestore.rules`.
+
+Veja detalhes em `docs/ERRO_FIREBASE_PERMISSOES.md`.

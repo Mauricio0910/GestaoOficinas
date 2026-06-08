@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // APENAS PARA MVP/TESTE CONTROLADO.
+    // Não use estas regras em produção.
+    match /oficinas/{oficinaId}/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

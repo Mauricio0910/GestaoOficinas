@@ -87,6 +87,7 @@ async function commitInBatches(operations) {
 
 export const firebaseStore = {
   enabled: false,
+  permissionError: false,
   tenantId: FIREBASE_TENANT_ID || 'oficina_demo',
 
   async init() {

@@ -8,6 +8,6 @@
     ]
   },
   "firestore": {
-    "rules": "firebase/firestore.dev.rules"
+    "rules": "firestore.rules"
   }
 }

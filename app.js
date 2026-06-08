@@ -151,13 +151,51 @@ function demoDb() {
 }
 
 async function loadDb() {
-  const initialized = await firebaseStore.init();
+  let initialized = false;
+
+  try {
+    initialized = await firebaseStore.init();
+  } catch (err) {
+    console.error('Falha ao inicializar Firebase:', err);
+    firebaseStore.enabled = false;
+    firebaseStore.permissionError = false;
+    toast('Firebase não inicializou. Usando banco local temporário.');
+  }
 
   if (initialized) {
-    const cloudDb = await firebaseStore.loadOrSeed(demoDb());
-    cloudDb.session = localStorage.getItem(`${STORAGE_KEY}_session`) || null;
-    localStorage.setItem(`${STORAGE_KEY}_cache`, JSON.stringify(cloudDb));
-    return cloudDb;
+    try {
+      const cloudDb = await firebaseStore.loadOrSeed(demoDb());
+      cloudDb.session = localStorage.getItem(`${STORAGE_KEY}_session`) || null;
+      localStorage.setItem(`${STORAGE_KEY}_cache`, JSON.stringify(cloudDb));
+      return cloudDb;
+    } catch (err) {
+      console.error('Falha ao carregar Firestore:', err);
+
+      const code = String(err?.code || err?.message || '').toLowerCase();
+      firebaseStore.permissionError = code.includes('permission') || code.includes('permission-denied');
+      firebaseStore.enabled = false;
+
+      if (firebaseStore.permissionError) {
+        toast('Firestore bloqueado por regras. Usando cache/local até publicar as regras de teste.');
+      } else {
+        toast('Não foi possível ler o Firestore. Usando cache/local temporário.');
+      }
+
+      const cached = localStorage.getItem(`${STORAGE_KEY}_cache`) || localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.session = localStorage.getItem(`${STORAGE_KEY}_session`) || parsed.session || null;
+          return parsed;
+        } catch {
+          // Continua para recriar a base demo local.
+        }
+      }
+
+      const d = demoDb();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+      return d;
+    }
   }
 
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -196,6 +234,8 @@ function updateStorageStatus() {
   if (!el) return;
   if (firebaseStore.enabled) {
     el.innerHTML = `<b>Banco atual:</b> Firebase Cloud Firestore · Tenant: <code>${escapeHtml(firebaseStore.tenantId)}</code>`;
+  } else if (firebaseStore.permissionError) {
+    el.innerHTML = `<b>Banco atual:</b> LocalStorage/cache. O Firestore recusou acesso por regras. Publique <code>firebase/firestore.dev.rules</code> para testar.`;
   } else {
     el.innerHTML = `<b>Banco atual:</b> LocalStorage. Configure <code>firebase-config.js</code> para usar Firebase.`;
   }
