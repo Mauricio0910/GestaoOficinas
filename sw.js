@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oficinapro-os-v2-firebase';
+const CACHE_NAME = 'oficinapro-os-v3-dashboard-veiculos';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const ASSETS = [
   './firebase-db.js',
   './manifest.json',
   './icon-192.svg',
-  './icon-512.svg'
+  './icon-512.svg',
+  './data/vehicle-catalog.sample.json'
 ];
 
 self.addEventListener('install', event => {

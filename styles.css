@@ -134,3 +134,37 @@ tr:hover td{background:#fbfdff}
   .modal{padding:0}
   .modal-card{height:100%;max-height:none;border-radius:0}
 }
+
+
+.bar-row{display:grid;grid-template-columns:150px 1fr 38px;gap:10px;align-items:center;padding:7px 0}
+.bar-row span{font-weight:700;color:#475569;font-size:13px}
+.bar-row b{text-align:right}
+.bar{height:12px;background:#e8eef7;border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-2));border-radius:999px}
+.vehicle-preview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:12px}
+.vehicle-preview div{background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px}
+.vehicle-preview strong{display:block;margin-top:4px;color:#112f57}
+.vehicle-lookup-card{margin-bottom:15px}
+.car-zone{position:absolute;z-index:1;background:rgba(255,255,255,.72);border:1px solid #cbd5e1;color:#334155;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;pointer-events:none}
+.zone-front{left:42px;top:145px}
+.zone-roof{left:300px;top:42px}
+.zone-rear{right:42px;top:145px}
+.marker.leve{background:#137333}
+.marker.media{background:#ad6800}
+.marker.grave{background:#b42318}
+.pill.leve{background:#e7f5eb;color:#137333}
+.pill.media{background:#fff7e6;color:#ad6800}
+.pill.grave{background:#fdecea;color:#b42318}
+.defect-line{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:flex-start;border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px;margin:8px 0}
+.defect-line p{margin:3px 0}
+.defect-index{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#1f4f8f;color:#fff;font-weight:900}
+.defect-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+@media (max-width: 920px){
+  .vehicle-preview{grid-template-columns:1fr 1fr}
+  .defect-line{grid-template-columns:30px 1fr}
+  .defect-actions{grid-column:1/-1;justify-content:flex-start}
+  .bar-row{grid-template-columns:110px 1fr 30px}
+}
+@media (max-width: 560px){
+  .vehicle-preview{grid-template-columns:1fr}
+}

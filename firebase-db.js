@@ -5,7 +5,7 @@ import {
 } from './firebase-config.js';
 
 const SDK_VERSION = '12.14.0';
-const DATA_COLLECTIONS = ['users', 'clientes', 'veiculos', 'servicos', 'pecas', 'ordens', 'logs'];
+const DATA_COLLECTIONS = ['users', 'clientes', 'veiculos', 'servicos', 'pecas', 'ordens', 'logs', 'catalogoVeiculos'];
 
 let firebaseApp = null;
 let firestore = null;
@@ -139,7 +139,8 @@ export const firebaseStore = {
       servicos: [],
       pecas: [],
       ordens: [],
-      logs: []
+      logs: [],
+      catalogoVeiculos: []
     };
 
     for (const name of DATA_COLLECTIONS) {

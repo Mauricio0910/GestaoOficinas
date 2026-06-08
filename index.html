@@ -86,6 +86,22 @@
               <span>Ticket médio</span>
               <strong id="statTicket">R$ 0,00</strong>
             </article>
+            <article class="card stat">
+              <span>Em execução</span>
+              <strong id="statExecucao">0</strong>
+            </article>
+            <article class="card stat">
+              <span>Finalizadas/faturadas</span>
+              <strong id="statFinalizadas">0</strong>
+            </article>
+            <article class="card stat">
+              <span>Veículos cadastrados</span>
+              <strong id="statVeiculos">0</strong>
+            </article>
+            <article class="card stat">
+              <span>Defeitos pendentes</span>
+              <strong id="statDefeitosPendentes">0</strong>
+            </article>
           </div>
           <div class="grid two">
             <article class="card">
@@ -101,6 +117,29 @@
                 <button class="btn small" data-tab-shortcut="pecas">Ver peças</button>
               </div>
               <div id="stockAlerts"></div>
+            </article>
+          </div>
+          <div class="grid two" style="margin-top:16px">
+            <article class="card">
+              <div class="card-head">
+                <h3>OS por status</h3>
+              </div>
+              <div id="statusChart"></div>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <h3>Serviços mais lançados</h3>
+              </div>
+              <div id="topServicos"></div>
+            </article>
+          </div>
+          <div class="grid" style="margin-top:16px">
+            <article class="card">
+              <div class="card-head">
+                <h3>Defeitos/avarias recentes</h3>
+                <button class="btn small" data-tab-shortcut="ordens">Abrir OS</button>
+              </div>
+              <div id="defeitosRecentes"></div>
             </article>
           </div>
         </section>
@@ -131,6 +170,36 @@
           <div class="notice">
             Integração SENATRAN está desativada neste MVP. O cadastro é manual, mas os campos de placa, chassi e Renavam já estão preparados.
           </div>
+          <article class="card vehicle-lookup-card">
+            <div class="card-head">
+              <div>
+                <h3>Identificação rápida do veículo</h3>
+                <p class="hint">Digite os dados básicos e escolha marca/modelo/ano a partir da base local de veículos.</p>
+              </div>
+              <button class="btn small" id="btnUsarIdentificacaoVeiculo">Usar em novo cadastro</button>
+            </div>
+            <form id="formIdentificaVeiculo" class="form-grid">
+              <label>Placa
+                <input name="placa" maxlength="8" placeholder="ABC1D23">
+              </label>
+              <label>Marca
+                <select name="marca"></select>
+              </label>
+              <label>Modelo
+                <select name="modelo"></select>
+              </label>
+              <label>Ano modelo
+                <select name="anoModelo"></select>
+              </label>
+              <label>Cor
+                <input name="cor" placeholder="Prata, branco, preto...">
+              </label>
+              <label>KM atual
+                <input name="kmAtual" type="number" min="0" placeholder="0">
+              </label>
+            </form>
+            <div id="vehicleLookupPreview" style="margin-top:12px"></div>
+          </article>
           <div id="listaVeiculos" class="table-wrap"></div>
         </section>
 

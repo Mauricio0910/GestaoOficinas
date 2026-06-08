@@ -125,3 +125,13 @@ firebase deploy --only firestore:rules
 Ou cole manualmente no Firebase Console o conteúdo de `firestore.rules`.
 
 Veja detalhes em `docs/ERRO_FIREBASE_PERMISSOES.md`.
+
+
+## Incrementos desta versão
+
+- Dashboard ampliado com indicadores operacionais e defeitos pendentes.
+- Identificação rápida de veículo por marca/modelo/ano usando base local.
+- Formulário de veículo com seleção por catálogo e campos manuais de ajuste.
+- Checklist visual aprimorado para o mecânico marcar área, tipo de defeito, gravidade, status e observação.
+- Coleção `catalogoVeiculos` preparada para Firebase/Firestore.
+- Documento técnico em `docs/incremento-dashboard-veiculos-checklist.md`.

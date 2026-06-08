@@ -80,6 +80,182 @@ function toast(msg) {
   toast._timer = setTimeout(() => el.classList.add('hidden'), 2600);
 }
 
+const DEFECT_AREAS = [
+  'Dianteira', 'Capô', 'Para-brisa', 'Teto', 'Porta dianteira esquerda',
+  'Porta traseira esquerda', 'Lateral esquerda', 'Porta dianteira direita',
+  'Porta traseira direita', 'Lateral direita', 'Para-lama dianteiro',
+  'Para-lama traseiro', 'Traseira', 'Porta-malas', 'Lanterna/farol',
+  'Roda/pneu', 'Interior', 'Motor', 'Suspensão', 'Freios', 'Elétrica'
+];
+
+const DEFECT_TYPES = [
+  'Risco', 'Amassado', 'Quebrado', 'Pintura descascada', 'Vidro trincado',
+  'Pneu danificado', 'Vazamento', 'Barulho', 'Falha elétrica', 'Falha mecânica',
+  'Peça ausente', 'Desgaste', 'Folga', 'Superaquecimento', 'Outro'
+];
+
+function years(from, to = 2026) {
+  const out = [];
+  for (let y = to; y >= from; y--) out.push(y);
+  return out;
+}
+
+function vehicleCatalog() {
+  return [
+    { id: 'vw-gol', marca: 'Volkswagen', modelo: 'Gol', carroceria: 'Hatch', anos: years(1995, 2023), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'vw-voyage', marca: 'Volkswagen', modelo: 'Voyage', carroceria: 'Sedã', anos: years(2009, 2023), combustiveis: ['Flex'] },
+    { id: 'vw-polo', marca: 'Volkswagen', modelo: 'Polo', carroceria: 'Hatch', anos: years(2003, 2026), combustiveis: ['Flex'] },
+    { id: 'vw-virtus', marca: 'Volkswagen', modelo: 'Virtus', carroceria: 'Sedã', anos: years(2018, 2026), combustiveis: ['Flex'] },
+    { id: 'vw-tcross', marca: 'Volkswagen', modelo: 'T-Cross', carroceria: 'SUV', anos: years(2019, 2026), combustiveis: ['Flex'] },
+
+    { id: 'fiat-uno', marca: 'Fiat', modelo: 'Uno', carroceria: 'Hatch', anos: years(1995, 2021), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'fiat-palio', marca: 'Fiat', modelo: 'Palio', carroceria: 'Hatch', anos: years(1996, 2017), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'fiat-argo', marca: 'Fiat', modelo: 'Argo', carroceria: 'Hatch', anos: years(2018, 2026), combustiveis: ['Flex'] },
+    { id: 'fiat-cronos', marca: 'Fiat', modelo: 'Cronos', carroceria: 'Sedã', anos: years(2018, 2026), combustiveis: ['Flex'] },
+    { id: 'fiat-strada', marca: 'Fiat', modelo: 'Strada', carroceria: 'Picape', anos: years(1998, 2026), combustiveis: ['Flex', 'Diesel'] },
+    { id: 'fiat-toro', marca: 'Fiat', modelo: 'Toro', carroceria: 'Picape', anos: years(2016, 2026), combustiveis: ['Flex', 'Diesel'] },
+
+    { id: 'gm-celta', marca: 'Chevrolet', modelo: 'Celta', carroceria: 'Hatch', anos: years(2001, 2016), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'gm-onix', marca: 'Chevrolet', modelo: 'Onix', carroceria: 'Hatch', anos: years(2013, 2026), combustiveis: ['Flex'] },
+    { id: 'gm-onix-plus', marca: 'Chevrolet', modelo: 'Onix Plus', carroceria: 'Sedã', anos: years(2020, 2026), combustiveis: ['Flex'] },
+    { id: 'gm-prisma', marca: 'Chevrolet', modelo: 'Prisma', carroceria: 'Sedã', anos: years(2007, 2019), combustiveis: ['Flex'] },
+    { id: 'gm-cruze', marca: 'Chevrolet', modelo: 'Cruze', carroceria: 'Sedã/Hatch', anos: years(2012, 2023), combustiveis: ['Flex'] },
+    { id: 'gm-s10', marca: 'Chevrolet', modelo: 'S10', carroceria: 'Picape', anos: years(1995, 2026), combustiveis: ['Flex', 'Diesel'] },
+    { id: 'gm-tracker', marca: 'Chevrolet', modelo: 'Tracker', carroceria: 'SUV', anos: years(2014, 2026), combustiveis: ['Flex'] },
+
+    { id: 'ford-ka', marca: 'Ford', modelo: 'Ka', carroceria: 'Hatch', anos: years(1997, 2021), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'ford-fiesta', marca: 'Ford', modelo: 'Fiesta', carroceria: 'Hatch/Sedã', anos: years(1996, 2019), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'ford-ecosport', marca: 'Ford', modelo: 'EcoSport', carroceria: 'SUV', anos: years(2003, 2021), combustiveis: ['Flex'] },
+    { id: 'ford-ranger', marca: 'Ford', modelo: 'Ranger', carroceria: 'Picape', anos: years(1995, 2026), combustiveis: ['Diesel', 'Flex'] },
+
+    { id: 'toyota-corolla', marca: 'Toyota', modelo: 'Corolla', carroceria: 'Sedã', anos: years(1998, 2026), combustiveis: ['Flex', 'Híbrido', 'Gasolina'] },
+    { id: 'toyota-etios', marca: 'Toyota', modelo: 'Etios', carroceria: 'Hatch/Sedã', anos: years(2013, 2021), combustiveis: ['Flex'] },
+    { id: 'toyota-yaris', marca: 'Toyota', modelo: 'Yaris', carroceria: 'Hatch/Sedã', anos: years(2018, 2026), combustiveis: ['Flex'] },
+    { id: 'toyota-hilux', marca: 'Toyota', modelo: 'Hilux', carroceria: 'Picape', anos: years(1995, 2026), combustiveis: ['Diesel', 'Flex'] },
+    { id: 'toyota-sw4', marca: 'Toyota', modelo: 'SW4', carroceria: 'SUV', anos: years(1995, 2026), combustiveis: ['Diesel', 'Flex'] },
+
+    { id: 'honda-civic', marca: 'Honda', modelo: 'Civic', carroceria: 'Sedã', anos: years(1995, 2026), combustiveis: ['Flex', 'Gasolina', 'Híbrido'] },
+    { id: 'honda-fit', marca: 'Honda', modelo: 'Fit', carroceria: 'Monovolume/Hatch', anos: years(2004, 2021), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'honda-city', marca: 'Honda', modelo: 'City', carroceria: 'Hatch/Sedã', anos: years(2010, 2026), combustiveis: ['Flex'] },
+    { id: 'honda-hrv', marca: 'Honda', modelo: 'HR-V', carroceria: 'SUV', anos: years(2016, 2026), combustiveis: ['Flex'] },
+
+    { id: 'hyundai-hb20', marca: 'Hyundai', modelo: 'HB20', carroceria: 'Hatch', anos: years(2013, 2026), combustiveis: ['Flex'] },
+    { id: 'hyundai-hb20s', marca: 'Hyundai', modelo: 'HB20S', carroceria: 'Sedã', anos: years(2013, 2026), combustiveis: ['Flex'] },
+    { id: 'hyundai-creta', marca: 'Hyundai', modelo: 'Creta', carroceria: 'SUV', anos: years(2017, 2026), combustiveis: ['Flex'] },
+    { id: 'hyundai-tucson', marca: 'Hyundai', modelo: 'Tucson', carroceria: 'SUV', anos: years(2005, 2026), combustiveis: ['Flex', 'Gasolina'] },
+
+    { id: 'renault-kwid', marca: 'Renault', modelo: 'Kwid', carroceria: 'Hatch', anos: years(2018, 2026), combustiveis: ['Flex'] },
+    { id: 'renault-sandero', marca: 'Renault', modelo: 'Sandero', carroceria: 'Hatch', anos: years(2008, 2024), combustiveis: ['Flex'] },
+    { id: 'renault-logan', marca: 'Renault', modelo: 'Logan', carroceria: 'Sedã', anos: years(2008, 2024), combustiveis: ['Flex'] },
+    { id: 'renault-duster', marca: 'Renault', modelo: 'Duster', carroceria: 'SUV', anos: years(2012, 2026), combustiveis: ['Flex'] },
+    { id: 'renault-oroch', marca: 'Renault', modelo: 'Oroch', carroceria: 'Picape', anos: years(2016, 2026), combustiveis: ['Flex'] },
+
+    { id: 'jeep-renegade', marca: 'Jeep', modelo: 'Renegade', carroceria: 'SUV', anos: years(2015, 2026), combustiveis: ['Flex', 'Diesel'] },
+    { id: 'jeep-compass', marca: 'Jeep', modelo: 'Compass', carroceria: 'SUV', anos: years(2017, 2026), combustiveis: ['Flex', 'Diesel', 'Híbrido'] },
+    { id: 'jeep-commander', marca: 'Jeep', modelo: 'Commander', carroceria: 'SUV', anos: years(2022, 2026), combustiveis: ['Flex', 'Diesel'] },
+
+    { id: 'nissan-march', marca: 'Nissan', modelo: 'March', carroceria: 'Hatch', anos: years(2012, 2021), combustiveis: ['Flex'] },
+    { id: 'nissan-versa', marca: 'Nissan', modelo: 'Versa', carroceria: 'Sedã', anos: years(2012, 2026), combustiveis: ['Flex'] },
+    { id: 'nissan-kicks', marca: 'Nissan', modelo: 'Kicks', carroceria: 'SUV', anos: years(2017, 2026), combustiveis: ['Flex'] },
+    { id: 'nissan-frontier', marca: 'Nissan', modelo: 'Frontier', carroceria: 'Picape', anos: years(2003, 2026), combustiveis: ['Diesel'] },
+
+    { id: 'peugeot-208', marca: 'Peugeot', modelo: '208', carroceria: 'Hatch', anos: years(2014, 2026), combustiveis: ['Flex', 'Elétrico'] },
+    { id: 'peugeot-2008', marca: 'Peugeot', modelo: '2008', carroceria: 'SUV', anos: years(2016, 2026), combustiveis: ['Flex', 'Elétrico'] },
+    { id: 'citroen-c3', marca: 'Citroën', modelo: 'C3', carroceria: 'Hatch', anos: years(2003, 2026), combustiveis: ['Flex'] },
+    { id: 'citroen-aircross', marca: 'Citroën', modelo: 'Aircross', carroceria: 'SUV/Minivan', anos: years(2011, 2026), combustiveis: ['Flex'] },
+
+    { id: 'mitsubishi-l200', marca: 'Mitsubishi', modelo: 'L200 Triton', carroceria: 'Picape', anos: years(2003, 2026), combustiveis: ['Diesel'] },
+    { id: 'mitsubishi-asx', marca: 'Mitsubishi', modelo: 'ASX', carroceria: 'SUV', anos: years(2011, 2022), combustiveis: ['Gasolina', 'Flex'] },
+    { id: 'kia-sportage', marca: 'Kia', modelo: 'Sportage', carroceria: 'SUV', anos: years(1998, 2026), combustiveis: ['Gasolina', 'Flex', 'Híbrido'] }
+  ];
+}
+
+function normalizeDb(database) {
+  const d = database || demoDb();
+  d.config = d.config || {};
+  d.users = Array.isArray(d.users) ? d.users : [];
+  d.clientes = Array.isArray(d.clientes) ? d.clientes : [];
+  d.veiculos = Array.isArray(d.veiculos) ? d.veiculos : [];
+  d.servicos = Array.isArray(d.servicos) ? d.servicos : [];
+  d.pecas = Array.isArray(d.pecas) ? d.pecas : [];
+  d.ordens = Array.isArray(d.ordens) ? d.ordens : [];
+  d.logs = Array.isArray(d.logs) ? d.logs : [];
+  d.catalogoVeiculos = Array.isArray(d.catalogoVeiculos) && d.catalogoVeiculos.length ? d.catalogoVeiculos : vehicleCatalog();
+
+  d.veiculos.forEach(v => {
+    v.origemDados = v.origemDados || 'MANUAL';
+    v.catalogoId = v.catalogoId || '';
+  });
+
+  d.ordens.forEach(o => {
+    o.servicos = Array.isArray(o.servicos) ? o.servicos : [];
+    o.pecas = Array.isArray(o.pecas) ? o.pecas : [];
+    o.checklist = o.checklist || { entrada: null, saida: null };
+    if (o.checklist.entrada) {
+      o.checklist.entrada.marcacoes = Array.isArray(o.checklist.entrada.marcacoes) ? o.checklist.entrada.marcacoes : [];
+      o.checklist.entrada.marcacoes.forEach(m => {
+        m.area = m.area || 'Diagrama';
+        m.tipo = m.tipo || 'Outro';
+        m.gravidade = m.gravidade || 'Leve';
+        m.status = m.status || 'Pendente';
+        m.fotoUrl = m.fotoUrl || '';
+      });
+    }
+  });
+
+  return d;
+}
+
+function getVehicleCatalog() {
+  return Array.isArray(db?.catalogoVeiculos) && db.catalogoVeiculos.length ? db.catalogoVeiculos : vehicleCatalog();
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+}
+
+function getCatalogMarcas() {
+  return uniqueSorted(getVehicleCatalog().map(v => v.marca));
+}
+
+function getCatalogModelos(marca) {
+  return getVehicleCatalog()
+    .filter(v => !marca || v.marca === marca)
+    .sort((a, b) => `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`, 'pt-BR'));
+}
+
+function getCatalogItem(id) {
+  return getVehicleCatalog().find(v => v.id === id);
+}
+
+function buildVehicleName(v) {
+  if (!v) return '-';
+  const ano = v.anoModelo || v.anoFabricacao || '';
+  return `${v.marca || ''} ${v.modelo || ''}${ano ? ` ${ano}` : ''}`.trim() || '-';
+}
+
+function detectAreaByPoint(x, y) {
+  const nx = Number(x);
+  const ny = Number(y);
+
+  if (ny < 24) return 'Teto';
+  if (nx < 20 && ny < 65) return 'Dianteira';
+  if (nx > 80 && ny < 65) return 'Traseira';
+  if (ny > 68 && (nx < 34 || nx > 66)) return 'Roda/pneu';
+  if (ny > 68) return 'Suspensão';
+  if (nx < 43) return 'Lateral esquerda';
+  if (nx > 57) return 'Lateral direita';
+  return 'Porta/centro do veículo';
+}
+
+function defectSeverityClass(gravidade) {
+  const g = String(gravidade || '').toLowerCase();
+  if (g.includes('grave')) return 'grave';
+  if (g.includes('média') || g.includes('media')) return 'media';
+  return 'leve';
+}
+
+
 function demoDb() {
   const adminId = uuid();
   const mecId = uuid();
@@ -104,6 +280,7 @@ function demoDb() {
       comissaoPadrao: 10
     },
     session: null,
+    catalogoVeiculos: vehicleCatalog(),
     users: [
       { id: adminId, nome: 'Administrador', email: 'admin@oficina.com', senha: 'admin123', perfil: 'ADMIN', ativo: true, criadoEm: nowIso() },
       { id: mecId, nome: 'João Mecânico', email: 'mecanico@oficina.com', senha: '123456', perfil: 'MECANICO', ativo: true, criadoEm: nowIso() }
@@ -113,8 +290,8 @@ function demoDb() {
       { id: cli2, tipoPessoa: 'F', nome: 'Mariana Costa', cpfCnpj: '22233344455', telefone: '(11) 97777-2000', whatsapp: '(11) 97777-2000', email: 'mariana@email.com', endereco: 'Rua B, 20', consentimentoLgpd: true, criadoEm: nowIso() }
     ],
     veiculos: [
-      { id: vei1, clienteId: cli1, placa: 'ABC1D23', chassi: '', renavam: '', marca: 'Toyota', modelo: 'Corolla', anoFabricacao: 2019, anoModelo: 2020, cor: 'Prata', combustivel: 'Flex', kmAtual: 65800, origemDados: 'MANUAL', criadoEm: nowIso() },
-      { id: vei2, clienteId: cli2, placa: 'XYZ9A87', chassi: '', renavam: '', marca: 'Honda', modelo: 'Civic', anoFabricacao: 2018, anoModelo: 2018, cor: 'Preto', combustivel: 'Flex', kmAtual: 82500, origemDados: 'MANUAL', criadoEm: nowIso() }
+      { id: vei1, clienteId: cli1, placa: 'ABC1D23', chassi: '', renavam: '', catalogoId: 'toyota-corolla', marca: 'Toyota', modelo: 'Corolla', anoFabricacao: 2019, anoModelo: 2020, cor: 'Prata', combustivel: 'Flex', kmAtual: 65800, origemDados: 'MANUAL', criadoEm: nowIso() },
+      { id: vei2, clienteId: cli2, placa: 'XYZ9A87', chassi: '', renavam: '', catalogoId: 'honda-civic', marca: 'Honda', modelo: 'Civic', anoFabricacao: 2018, anoModelo: 2018, cor: 'Preto', combustivel: 'Flex', kmAtual: 82500, origemDados: 'MANUAL', criadoEm: nowIso() }
     ],
     servicos: [
       { id: serv1, descricao: 'Troca de óleo e filtro', valorPadrao: 120, garantiaDias: 30, comissaoPercentual: 5, ativo: true },
@@ -167,7 +344,7 @@ async function loadDb() {
       const cloudDb = await firebaseStore.loadOrSeed(demoDb());
       cloudDb.session = localStorage.getItem(`${STORAGE_KEY}_session`) || null;
       localStorage.setItem(`${STORAGE_KEY}_cache`, JSON.stringify(cloudDb));
-      return cloudDb;
+      return normalizeDb(cloudDb);
     } catch (err) {
       console.error('Falha ao carregar Firestore:', err);
 
@@ -186,7 +363,7 @@ async function loadDb() {
         try {
           const parsed = JSON.parse(cached);
           parsed.session = localStorage.getItem(`${STORAGE_KEY}_session`) || parsed.session || null;
-          return parsed;
+          return normalizeDb(parsed);
         } catch {
           // Continua para recriar a base demo local.
         }
@@ -194,7 +371,7 @@ async function loadDb() {
 
       const d = demoDb();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-      return d;
+      return normalizeDb(d);
     }
   }
 
@@ -202,14 +379,14 @@ async function loadDb() {
   if (!raw) {
     const d = demoDb();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-    return d;
+    return normalizeDb(d);
   }
   try {
-    return JSON.parse(raw);
+    return normalizeDb(JSON.parse(raw));
   } catch {
     const d = demoDb();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-    return d;
+    return normalizeDb(d);
   }
 }
 
@@ -471,29 +648,61 @@ function nextOsNumber() {
 function renderDashboard() {
   const abertas = db.ordens.filter(o => ['ABERTA','DIAGNOSTICO','APROVADA','EM_EXECUCAO','AGUARDANDO_PECAS'].includes(o.status)).length;
   const aguardando = db.ordens.filter(o => o.status === 'AGUARDANDO_APROVACAO').length;
+  const execucao = db.ordens.filter(o => o.status === 'EM_EXECUCAO').length;
+  const finalizadas = db.ordens.filter(o => ['FINALIZADA','FATURADA'].includes(o.status)).length;
   const today = new Date();
   const mes = today.getMonth();
   const ano = today.getFullYear();
   const faturadasMes = db.ordens.filter(o => o.status === 'FATURADA' && o.faturadoEm && new Date(o.faturadoEm).getMonth() === mes && new Date(o.faturadoEm).getFullYear() === ano);
   const faturamento = faturadasMes.reduce((a,o) => a + calcOs(o).total, 0);
   const ticket = faturadasMes.length ? faturamento / faturadasMes.length : 0;
+  const defeitosPendentes = db.ordens.reduce((acc, o) => acc + ((o.checklist?.entrada?.marcacoes || []).filter(m => m.status !== 'Resolvido').length), 0);
+
   $('#statAbertas').textContent = abertas;
   $('#statAguardando').textContent = aguardando;
   $('#statFaturamento').textContent = money(faturamento);
   $('#statTicket').textContent = money(ticket);
+  $('#statExecucao').textContent = execucao;
+  $('#statFinalizadas').textContent = finalizadas;
+  $('#statVeiculos').textContent = db.veiculos.length;
+  $('#statDefeitosPendentes').textContent = defeitosPendentes;
 
   $('#recentOs').innerHTML = db.ordens.slice(0,5).map(o => {
     const c = getCliente(o.clienteId);
     const v = getVeiculo(o.veiculoId);
     return `<div class="summary-line">
-      <div><b>OS #${o.numero}</b><br><span class="hint">${escapeHtml(c?.nome)} · ${escapeHtml(v?.placa || '')}</span></div>
+      <div><b>OS #${o.numero}</b><br><span class="hint">${escapeHtml(c?.nome)} · ${escapeHtml(v?.placa || '')} · ${escapeHtml(buildVehicleName(v))}</span></div>
       <span class="pill ${o.status}">${statusLabels[o.status]}</span>
     </div>`;
   }).join('') || '<p class="hint">Nenhuma OS cadastrada.</p>';
 
   const alerts = db.pecas.filter(p => number(p.estoqueAtual) <= number(p.estoqueMinimo));
   $('#stockAlerts').innerHTML = alerts.map(p => `<div class="summary-line"><div><b>${escapeHtml(p.descricao)}</b><br><span class="hint">SKU ${escapeHtml(p.sku || '-')}</span></div><span class="pill">${number(p.estoqueAtual)} un.</span></div>`).join('') || '<p class="hint">Nenhum item abaixo do mínimo.</p>';
+
+  const statusCounts = Object.entries(statusLabels).map(([status, label]) => ({
+    status, label, qtd: db.ordens.filter(o => o.status === status).length
+  })).filter(x => x.qtd > 0);
+  const maxStatus = Math.max(1, ...statusCounts.map(x => x.qtd));
+  $('#statusChart').innerHTML = statusCounts.map(x => `
+    <div class="bar-row">
+      <span>${escapeHtml(x.label)}</span>
+      <div class="bar"><i style="width:${Math.max(8, x.qtd / maxStatus * 100)}%"></i></div>
+      <b>${x.qtd}</b>
+    </div>`).join('') || '<p class="hint">Sem OS para montar gráfico.</p>';
+
+  const servAgg = new Map();
+  db.ordens.forEach(o => (o.servicos || []).forEach(s => servAgg.set(s.descricao, (servAgg.get(s.descricao) || 0) + Number(s.quantidade || 1))));
+  const topServicos = [...servAgg.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
+  $('#topServicos').innerHTML = topServicos.map(([nome, qtd]) => `<div class="summary-line"><span>${escapeHtml(nome)}</span><b>${qtd}</b></div>`).join('') || '<p class="hint">Nenhum serviço lançado.</p>';
+
+  const defeitos = db.ordens.flatMap(o => (o.checklist?.entrada?.marcacoes || []).map(m => ({ ...m, osNumero: o.numero, veiculo: getVeiculo(o.veiculoId) }))).slice(-6).reverse();
+  $('#defeitosRecentes').innerHTML = defeitos.map(m => `
+    <div class="summary-line">
+      <div><b>${escapeHtml(m.area || '-')} · ${escapeHtml(m.tipo || '-')}</b><br><span class="hint">OS #${m.osNumero} · ${escapeHtml(buildVehicleName(m.veiculo))}</span></div>
+      <span class="pill ${defectSeverityClass(m.gravidade)}">${escapeHtml(m.gravidade || 'Leve')}</span>
+    </div>`).join('') || '<p class="hint">Nenhum defeito marcado no checklist.</p>';
 }
+
 
 function renderOrdens() {
   const filtro = ($('#filtroOs').value || '').toLowerCase();
@@ -675,7 +884,7 @@ function openOsDetails(os) {
         <article class="card">
           <h3>Dados principais</h3>
           <div class="summary-line"><span>Cliente</span><b>${escapeHtml(c?.nome)}</b></div>
-          <div class="summary-line"><span>Veículo</span><b>${escapeHtml(v?.marca)} ${escapeHtml(v?.modelo)} · ${escapeHtml(v?.placa)}</b></div>
+          <div class="summary-line"><span>Veículo</span><b>${escapeHtml(buildVehicleName(v))} · ${escapeHtml(v?.placa)}</b></div>
           <div class="summary-line"><span>Status</span><span class="pill ${os.status}">${statusLabels[os.status]}</span></div>
           <div class="summary-line"><span>KM entrada</span><b>${number(os.kmEntrada)}</b></div>
           <div class="summary-line"><span>Abertura</span><b>${formatDate(os.dataAbertura)}</b></div>
@@ -870,32 +1079,67 @@ function renderItensOsTable(os) {
 
 function renderChecklistHtml(os) {
   const entrada = os.checklist?.entrada || { combustivel: 50, estepe: true, macaco: true, chaveRoda: true, observacoes: '', marcacoes: [], assinatura: '' };
+  const areaOpts = DEFECT_AREAS.map(a => `<option>${escapeHtml(a)}</option>`).join('');
+  const tipoOpts = DEFECT_TYPES.map(t => `<option>${escapeHtml(t)}</option>`).join('');
   return `
     <article class="card">
-      <h3>Checklist visual de entrada</h3>
+      <div class="card-head">
+        <div>
+          <h3>Checklist visual de entrada</h3>
+          <p class="hint">Clique no desenho para registrar a posição. O mecânico informa área, tipo, gravidade e observação do defeito.</p>
+        </div>
+      </div>
       <form id="formChecklist" class="form-grid">
         <label>Combustível %
           <input name="combustivel" type="number" min="0" max="100" value="${entrada.combustivel ?? 50}">
         </label>
-        <label>Tipo de avaria para próxima marcação
-          <select name="tipoAvaria">
-            <option>Risco</option><option>Amassado</option><option>Quebrado</option><option>Pintura</option><option>Vidro</option><option>Pneu</option><option>Acessório ausente</option>
+        <label>Área do veículo
+          <select name="areaAvaria">
+            <option value="AUTO">Detectar pelo clique</option>
+            ${areaOpts}
           </select>
+        </label>
+        <label>Tipo de defeito/avaria
+          <select name="tipoAvaria">${tipoOpts}</select>
+        </label>
+        <label>Gravidade
+          <select name="gravidadeAvaria">
+            <option>Leve</option>
+            <option>Média</option>
+            <option>Grave</option>
+          </select>
+        </label>
+        <label>Status do defeito
+          <select name="statusAvaria">
+            <option>Pendente</option>
+            <option>Em análise</option>
+            <option>Aprovado para reparo</option>
+            <option>Resolvido</option>
+          </select>
+        </label>
+        <label>Foto/URL opcional
+          <input name="fotoAvaria" placeholder="Cole link da foto, se houver">
+        </label>
+        <label class="full">Observação da próxima marcação
+          <input name="obsAvaria" placeholder="Ex.: risco profundo próximo à porta">
         </label>
         <label><input type="checkbox" name="estepe" ${entrada.estepe ? 'checked' : ''}> Possui estepe</label>
         <label><input type="checkbox" name="macaco" ${entrada.macaco ? 'checked' : ''}> Possui macaco</label>
         <label><input type="checkbox" name="chaveRoda" ${entrada.chaveRoda ? 'checked' : ''}> Possui chave de roda</label>
-        <label class="full">Observações
+        <label class="full">Observações gerais do checklist
           <textarea name="observacoes">${escapeHtml(entrada.observacoes || '')}</textarea>
         </label>
       </form>
       <div class="vehicle-canvas-wrap">
         <div id="vehicleDiagram" class="vehicle-diagram">
+          <div class="car-zone zone-front">Dianteira</div>
+          <div class="car-zone zone-roof">Teto/vidros</div>
+          <div class="car-zone zone-rear">Traseira</div>
           <div class="car-body"></div>
           <div class="car-window"></div>
           <div class="car-wheel w1"></div>
           <div class="car-wheel w2"></div>
-          ${(entrada.marcacoes || []).map((m, idx) => `<div class="marker" title="${escapeHtml(m.tipo)} - ${escapeHtml(m.obs || '')}" style="left:${m.x}%;top:${m.y}%">${idx+1}</div>`).join('')}
+          ${(entrada.marcacoes || []).map((m, idx) => `<div class="marker ${defectSeverityClass(m.gravidade)}" title="${escapeHtml(m.area || '')} · ${escapeHtml(m.tipo)} - ${escapeHtml(m.obs || '')}" style="left:${m.x}%;top:${m.y}%">${idx+1}</div>`).join('')}
         </div>
       </div>
       <div class="row" style="margin-top:12px">
@@ -911,20 +1155,55 @@ function bindChecklist(os) {
   const entrada = os.checklist.entrada || { combustivel: 50, estepe: true, macaco: true, chaveRoda: true, observacoes: '', marcacoes: [], assinatura: '' };
   os.checklist.entrada = entrada;
   renderMarcacoes(entrada);
+
   $('#vehicleDiagram').addEventListener('click', ev => {
     const rect = ev.currentTarget.getBoundingClientRect();
     const x = ((ev.clientX - rect.left) / rect.width * 100).toFixed(2);
     const y = ((ev.clientY - rect.top) / rect.height * 100).toFixed(2);
     const tipo = form.tipoAvaria.value;
-    const obs = prompt('Observação da avaria:', tipo);
-    entrada.marcacoes.push({ id: uuid(), area: 'Diagrama', tipo, x: Number(x), y: Number(y), obs: obs || '', fotoUrl: '' });
+    const area = form.areaAvaria.value === 'AUTO' ? detectAreaByPoint(x, y) : form.areaAvaria.value;
+    const gravidade = form.gravidadeAvaria.value;
+    const status = form.statusAvaria.value;
+    const obs = form.obsAvaria.value || `${tipo} em ${area}`;
+    const fotoUrl = form.fotoAvaria.value || '';
+
+    const before = JSON.parse(JSON.stringify(os));
+    entrada.marcacoes.push({
+      id: uuid(),
+      area,
+      tipo,
+      gravidade,
+      status,
+      x: Number(x),
+      y: Number(y),
+      obs,
+      fotoUrl,
+      criadoEm: nowIso(),
+      criadoPor: currentUser?.id || ''
+    });
     saveDb();
+    logAction('checklist_os', os.id, 'ADICIONAR_DEFEITO', before, os);
     openOsDetails(os);
     setTimeout(() => {
       const btn = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
       if (btn) btn.click();
     }, 0);
   });
+
+  $('#listaMarcacoes').addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-del-marcacao]');
+    if (!btn) return;
+    const before = JSON.parse(JSON.stringify(os));
+    entrada.marcacoes = entrada.marcacoes.filter(m => m.id !== btn.dataset.delMarcacao);
+    saveDb();
+    logAction('checklist_os', os.id, 'REMOVER_DEFEITO', before, os);
+    openOsDetails(os);
+    setTimeout(() => {
+      const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
+      if (tab) tab.click();
+    }, 0);
+  });
+
   $('#btnSalvarChecklist').addEventListener('click', ev => {
     ev.preventDefault();
     const before = JSON.parse(JSON.stringify(os));
@@ -937,6 +1216,7 @@ function bindChecklist(os) {
     logAction('checklist_os', os.id, 'SALVAR_CHECKLIST', before, os);
     toast('Checklist salvo.');
   });
+
   $('#btnLimparMarcacoes').addEventListener('click', ev => {
     ev.preventDefault();
     if (!confirm('Limpar marcações do checklist?')) return;
@@ -949,8 +1229,22 @@ function bindChecklist(os) {
 }
 
 function renderMarcacoes(entrada) {
-  $('#listaMarcacoes').innerHTML = (entrada.marcacoes || []).map((m, i) => `<div class="summary-line"><span><b>${i+1}. ${escapeHtml(m.tipo)}</b> · ${escapeHtml(m.obs || '')}</span><span>${m.x}% / ${m.y}%</span></div>`).join('') || '<p class="hint">Clique no desenho do veículo para adicionar avarias.</p>';
+  $('#listaMarcacoes').innerHTML = (entrada.marcacoes || []).map((m, i) => `
+    <div class="defect-line">
+      <div class="defect-index">${i+1}</div>
+      <div>
+        <b>${escapeHtml(m.area || '-')} · ${escapeHtml(m.tipo || '-')}</b>
+        <p>${escapeHtml(m.obs || '')}</p>
+        <span class="hint">Posição ${m.x}% / ${m.y}%${m.fotoUrl ? ` · Foto: ${escapeHtml(m.fotoUrl)}` : ''}</span>
+      </div>
+      <div class="defect-actions">
+        <span class="pill ${defectSeverityClass(m.gravidade)}">${escapeHtml(m.gravidade || 'Leve')}</span>
+        <span class="pill">${escapeHtml(m.status || 'Pendente')}</span>
+        <button class="btn small danger" data-del-marcacao="${m.id}">Excluir</button>
+      </div>
+    </div>`).join('') || '<p class="hint">Clique no desenho do veículo para adicionar defeitos/avarias.</p>';
 }
+
 
 function initSignaturePad(os) {
   const canvas = $('#signaturePad');
@@ -1078,7 +1372,7 @@ function gerarPdfOs(os) {
     <hr>
     <h2>Cliente e veículo</h2>
     <p><b>Cliente:</b> ${escapeHtml(c?.nome)} · <b>Telefone:</b> ${escapeHtml(c?.telefone || '')}</p>
-    <p><b>Veículo:</b> ${escapeHtml(v?.marca)} ${escapeHtml(v?.modelo)} · <b>Placa:</b> ${escapeHtml(v?.placa || '')} · <b>KM:</b> ${number(os.kmEntrada)}</p>
+    <p><b>Veículo:</b> ${escapeHtml(buildVehicleName(v))} · <b>Placa:</b> ${escapeHtml(v?.placa || '')} · <b>KM:</b> ${number(os.kmEntrada)}</p>
     <p><b>Status:</b> ${statusLabels[os.status]} · <b>Abertura:</b> ${formatDate(os.dataAbertura)}</p>
     <h2>Relato e diagnóstico</h2>
     <p><b>Reclamação:</b> ${escapeHtml(os.reclamacao || '-')}</p>
@@ -1088,7 +1382,7 @@ function gerarPdfOs(os) {
     <h2>Checklist</h2>
     <p><b>Combustível:</b> ${os.checklist?.entrada?.combustivel ?? '-'}% · <b>Estepe:</b> ${os.checklist?.entrada?.estepe ? 'Sim' : 'Não'} · <b>Macaco:</b> ${os.checklist?.entrada?.macaco ? 'Sim' : 'Não'} · <b>Chave de roda:</b> ${os.checklist?.entrada?.chaveRoda ? 'Sim' : 'Não'}</p>
     <p><b>Observações:</b> ${escapeHtml(os.checklist?.entrada?.observacoes || '-')}</p>
-    <ul>${marks.map((m,i) => `<li>${i+1}. ${escapeHtml(m.tipo)} - ${escapeHtml(m.obs || '')}</li>`).join('')}</ul>
+    <ul>${marks.map((m,i) => `<li>${i+1}. ${escapeHtml(m.area || '-')} · ${escapeHtml(m.tipo)} · ${escapeHtml(m.gravidade || 'Leve')} · ${escapeHtml(m.status || 'Pendente')} - ${escapeHtml(m.obs || '')}</li>`).join('')}</ul>
     ${os.garantia ? `<h2>Garantia</h2><p>${escapeHtml(os.garantia.termo)}</p>` : ''}
     ${os.assinaturaCliente ? `<h2>Assinatura digital</h2><img src="${os.assinaturaCliente}" style="max-width:300px;border:1px solid #ccc">` : '<br><br><div class="sign"></div><p>Assinatura do cliente</p>'}
   </div><script>window.onload=()=>window.print();<\/script></body></html>`;
@@ -1152,52 +1446,179 @@ function openClienteForm(c = null) {
 }
 
 function renderVeiculos() {
+  renderVehicleLookup();
   const filtro = ($('#filtroVeiculo').value || '').toLowerCase();
   const rows = db.veiculos.filter(v => {
     const c = getCliente(v.clienteId);
-    return !filtro || [v.placa,v.marca,v.modelo,c?.nome,v.chassi,v.renavam].some(x => String(x||'').toLowerCase().includes(filtro));
+    return !filtro || [v.placa,v.marca,v.modelo,c?.nome,v.chassi,v.renavam,v.anoModelo,v.anoFabricacao].some(x => String(x||'').toLowerCase().includes(filtro));
   }).map(v => {
     const c = getCliente(v.clienteId);
-    return `<tr><td><b>${escapeHtml(v.placa || '-')}</b></td><td>${escapeHtml(v.marca)} ${escapeHtml(v.modelo)}</td><td>${v.anoFabricacao || ''}/${v.anoModelo || ''}</td><td>${escapeHtml(v.cor || '')}</td><td>${escapeHtml(c?.nome || '')}</td><td>${number(v.kmAtual)}</td><td>${escapeHtml(v.origemDados || 'MANUAL')}</td><td class="actions"><button class="btn small" data-edit-veiculo="${v.id}">Editar</button><button class="btn small danger" data-del-veiculo="${v.id}">Excluir</button></td></tr>`;
+    return `<tr><td><b>${escapeHtml(v.placa || '-')}</b></td><td>${escapeHtml(buildVehicleName(v))}</td><td>${escapeHtml(v.cor || '')}</td><td>${escapeHtml(c?.nome || '')}</td><td>${number(v.kmAtual)}</td><td>${escapeHtml(v.origemDados || 'MANUAL')}</td><td class="actions"><button class="btn small" data-edit-veiculo="${v.id}">Editar</button><button class="btn small danger" data-del-veiculo="${v.id}">Excluir</button></td></tr>`;
   }).join('');
-  $('#listaVeiculos').innerHTML = `<table><thead><tr><th>Placa</th><th>Veículo</th><th>Ano</th><th>Cor</th><th>Cliente</th><th>KM</th><th>Origem</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table>`;
+  $('#listaVeiculos').innerHTML = `<table><thead><tr><th>Placa</th><th>Marca / modelo / ano</th><th>Cor</th><th>Cliente</th><th>KM</th><th>Origem</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table>`;
   $$('[data-edit-veiculo]').forEach(b => b.addEventListener('click', () => openVeiculoForm(db.veiculos.find(v=>v.id===b.dataset.editVeiculo))));
   $$('[data-del-veiculo]').forEach(b => b.addEventListener('click', () => deleteEntity('veiculos', b.dataset.delVeiculo, renderVeiculos)));
 }
 
-function openVeiculoForm(v = null) {
-  const opts = db.clientes.map(c => `<option value="${c.id}" ${v?.clienteId===c.id?'selected':''}>${escapeHtml(c.nome)}</option>`).join('');
+function renderVehicleLookup() {
+  const form = $('#formIdentificaVeiculo');
+  if (!form || form.dataset.bound === '1') {
+    if (form) updateVehicleLookupPreview(form);
+    return;
+  }
+
+  form.dataset.bound = '1';
+  const marcas = getCatalogMarcas();
+  form.marca.innerHTML = marcas.map(m => `<option>${escapeHtml(m)}</option>`).join('');
+  updateVehicleLookupModelos(form);
+
+  form.marca.addEventListener('change', () => {
+    updateVehicleLookupModelos(form);
+    updateVehicleLookupPreview(form);
+  });
+  form.modelo.addEventListener('change', () => {
+    updateVehicleLookupAnos(form);
+    updateVehicleLookupPreview(form);
+  });
+  form.anoModelo.addEventListener('change', () => updateVehicleLookupPreview(form));
+  ['placa','cor','kmAtual'].forEach(name => form[name].addEventListener('input', () => updateVehicleLookupPreview(form)));
+
+  $('#btnUsarIdentificacaoVeiculo').addEventListener('click', () => {
+    const item = getCatalogItem(form.modelo.value);
+    openVeiculoForm(null, {
+      placa: form.placa.value,
+      marca: item?.marca || form.marca.value,
+      modelo: item?.modelo || '',
+      anoFabricacao: Number(form.anoModelo.value || 0),
+      anoModelo: Number(form.anoModelo.value || 0),
+      cor: form.cor.value,
+      combustivel: item?.combustiveis?.[0] || 'Flex',
+      kmAtual: Number(form.kmAtual.value || 0),
+      catalogoId: item?.id || '',
+      origemDados: 'CATALOGO_LOCAL'
+    });
+  });
+
+  updateVehicleLookupPreview(form);
+}
+
+function updateVehicleLookupModelos(form) {
+  const modelos = getCatalogModelos(form.marca.value);
+  form.modelo.innerHTML = modelos.map(m => `<option value="${m.id}">${escapeHtml(m.modelo)} · ${escapeHtml(m.carroceria || '')}</option>`).join('');
+  updateVehicleLookupAnos(form);
+}
+
+function updateVehicleLookupAnos(form) {
+  const item = getCatalogItem(form.modelo.value);
+  const anos = item?.anos?.length ? item.anos : years(2000, 2026);
+  form.anoModelo.innerHTML = anos.map(a => `<option>${a}</option>`).join('');
+}
+
+function updateVehicleLookupPreview(form) {
+  const item = getCatalogItem(form.modelo.value);
+  const placa = String(form.placa.value || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const ano = form.anoModelo.value || '';
+  const nome = item ? `${item.marca} ${item.modelo} ${ano}` : 'Selecione marca/modelo';
+  $('#vehicleLookupPreview').innerHTML = `
+    <div class="vehicle-preview">
+      <div><span class="hint">Identificação</span><strong>${escapeHtml(nome)}</strong></div>
+      <div><span class="hint">Placa</span><strong>${escapeHtml(placa || '-')}</strong></div>
+      <div><span class="hint">Combustível base</span><strong>${escapeHtml(item?.combustiveis?.join(' / ') || '-')}</strong></div>
+      <div><span class="hint">Carroceria</span><strong>${escapeHtml(item?.carroceria || '-')}</strong></div>
+    </div>`;
+}
+
+function openVeiculoForm(v = null, prefill = null) {
+  const data = { ...(prefill || {}), ...(v || {}) };
+  const opts = db.clientes.map(c => `<option value="${c.id}" ${data?.clienteId===c.id?'selected':''}>${escapeHtml(c.nome)}</option>`).join('');
+  const marcas = getCatalogMarcas();
+  const selectedMarca = data.marca || marcas[0] || '';
+  const modelos = getCatalogModelos(selectedMarca);
+  const selectedCatalogId = data.catalogoId || modelos.find(m => m.modelo === data.modelo)?.id || modelos[0]?.id || '';
+  const selectedCatalog = getCatalogItem(selectedCatalogId);
+  const anos = selectedCatalog?.anos?.length ? selectedCatalog.anos : years(2000, 2026);
+
   openModal(v ? 'Editar veículo' : 'Novo veículo', `
     <form id="formVeiculo" class="form-grid">
       <label class="full">Cliente<select name="clienteId" required>${opts}</select></label>
-      <label>Placa<input name="placa" maxlength="8" value="${escapeHtml(v?.placa || '')}"></label>
-      <label>Renavam<input name="renavam" value="${escapeHtml(v?.renavam || '')}"></label>
-      <label class="full">Chassi<input name="chassi" value="${escapeHtml(v?.chassi || '')}"></label>
-      <label>Marca<input name="marca" value="${escapeHtml(v?.marca || '')}"></label>
-      <label>Modelo<input name="modelo" value="${escapeHtml(v?.modelo || '')}"></label>
-      <label>Ano fabricação<input name="anoFabricacao" type="number" value="${v?.anoFabricacao || ''}"></label>
-      <label>Ano modelo<input name="anoModelo" type="number" value="${v?.anoModelo || ''}"></label>
-      <label>Cor<input name="cor" value="${escapeHtml(v?.cor || '')}"></label>
-      <label>Combustível<input name="combustivel" value="${escapeHtml(v?.combustivel || '')}"></label>
-      <label>KM atual<input name="kmAtual" type="number" value="${v?.kmAtual || ''}"></label>
+      <label>Placa<input name="placa" maxlength="8" value="${escapeHtml(data?.placa || '')}"></label>
+      <label>Renavam<input name="renavam" value="${escapeHtml(data?.renavam || '')}"></label>
+      <label class="full">Chassi<input name="chassi" value="${escapeHtml(data?.chassi || '')}"></label>
+
+      <label>Marca
+        <select name="marcaCatalogo">${marcas.map(m => `<option ${m === selectedMarca ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('')}</select>
+      </label>
+      <label>Modelo
+        <select name="catalogoId">${modelos.map(m => `<option value="${m.id}" ${m.id === selectedCatalogId ? 'selected' : ''}>${escapeHtml(m.modelo)} · ${escapeHtml(m.carroceria || '')}</option>`).join('')}</select>
+      </label>
+      <label>Ano fabricação
+        <input name="anoFabricacao" type="number" value="${data?.anoFabricacao || data?.anoModelo || ''}">
+      </label>
+      <label>Ano modelo
+        <select name="anoModelo">${anos.map(a => `<option ${Number(data?.anoModelo || data?.anoFabricacao || anos[0]) === Number(a) ? 'selected' : ''}>${a}</option>`).join('')}</select>
+      </label>
+      <label>Marca manual / ajuste
+        <input name="marca" value="${escapeHtml(data?.marca || selectedCatalog?.marca || '')}">
+      </label>
+      <label>Modelo manual / ajuste
+        <input name="modelo" value="${escapeHtml(data?.modelo || selectedCatalog?.modelo || '')}">
+      </label>
+      <label>Cor<input name="cor" value="${escapeHtml(data?.cor || '')}"></label>
+      <label>Combustível<input name="combustivel" value="${escapeHtml(data?.combustivel || selectedCatalog?.combustiveis?.[0] || '')}"></label>
+      <label>KM atual<input name="kmAtual" type="number" value="${data?.kmAtual || ''}"></label>
+      <label class="full">Prévia do veículo
+        <div id="formVeiculoPreview" class="notice"></div>
+      </label>
       <button class="btn primary" type="submit">Salvar</button>
     </form>`, () => {
-    $('#formVeiculo').addEventListener('submit', ev => {
+    const form = $('#formVeiculo');
+
+    function syncCatalogFields() {
+      const item = getCatalogItem(form.catalogoId.value);
+      if (!item) return;
+      form.marca.value = item.marca;
+      form.modelo.value = item.modelo;
+      if (!form.combustivel.value) form.combustivel.value = item.combustiveis?.[0] || '';
+      $('#formVeiculoPreview').innerHTML = `<b>${escapeHtml(item.marca)} ${escapeHtml(item.modelo)} ${escapeHtml(form.anoModelo.value || '')}</b> · ${escapeHtml(item.carroceria || '-')} · ${escapeHtml(item.combustiveis?.join(' / ') || '-')}`;
+    }
+
+    function reloadModelos() {
+      const modelos = getCatalogModelos(form.marcaCatalogo.value);
+      form.catalogoId.innerHTML = modelos.map(m => `<option value="${m.id}">${escapeHtml(m.modelo)} · ${escapeHtml(m.carroceria || '')}</option>`).join('');
+      reloadAnos();
+      syncCatalogFields();
+    }
+
+    function reloadAnos() {
+      const item = getCatalogItem(form.catalogoId.value);
+      const anos = item?.anos?.length ? item.anos : years(2000, 2026);
+      const current = form.anoModelo.value;
+      form.anoModelo.innerHTML = anos.map(a => `<option ${String(current || data?.anoModelo || data?.anoFabricacao || anos[0]) === String(a) ? 'selected' : ''}>${a}</option>`).join('');
+    }
+
+    form.marcaCatalogo.addEventListener('change', reloadModelos);
+    form.catalogoId.addEventListener('change', () => { reloadAnos(); syncCatalogFields(); });
+    form.anoModelo.addEventListener('change', syncCatalogFields);
+    syncCatalogFields();
+
+    form.addEventListener('submit', ev => {
       ev.preventDefault();
       const fd = new FormData(ev.target);
+      const cat = getCatalogItem(fd.get('catalogoId'));
       const obj = {
         clienteId: fd.get('clienteId'),
         placa: String(fd.get('placa') || '').toUpperCase().replace(/[^A-Z0-9]/g,''),
         renavam: onlyDigits(fd.get('renavam')),
         chassi: String(fd.get('chassi') || '').toUpperCase(),
-        marca: fd.get('marca'),
-        modelo: fd.get('modelo'),
-        anoFabricacao: Number(fd.get('anoFabricacao') || 0),
+        catalogoId: fd.get('catalogoId') || '',
+        marca: fd.get('marca') || cat?.marca || '',
+        modelo: fd.get('modelo') || cat?.modelo || '',
+        anoFabricacao: Number(fd.get('anoFabricacao') || fd.get('anoModelo') || 0),
         anoModelo: Number(fd.get('anoModelo') || 0),
         cor: fd.get('cor'),
         combustivel: fd.get('combustivel'),
         kmAtual: Number(fd.get('kmAtual') || 0),
-        origemDados: 'MANUAL'
+        origemDados: cat ? 'CATALOGO_LOCAL' : 'MANUAL'
       };
       if (v) {
         const before = JSON.parse(JSON.stringify(v));
@@ -1212,6 +1633,7 @@ function openVeiculoForm(v = null) {
     });
   });
 }
+
 
 function renderServicos() {
   const filtro = ($('#filtroServico').value || '').toLowerCase();
