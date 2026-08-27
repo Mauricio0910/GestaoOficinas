@@ -1,0 +1,58 @@
+[
+  {
+    "id": "toyota-corolla",
+    "marca": "Toyota",
+    "modelo": "Corolla",
+    "carroceria": "Sedã",
+    "anos": "1998-2026",
+    "combustiveis": [
+      "Flex",
+      "Híbrido",
+      "Gasolina"
+    ]
+  },
+  {
+    "id": "honda-civic",
+    "marca": "Honda",
+    "modelo": "Civic",
+    "carroceria": "Sedã",
+    "anos": "1995-2026",
+    "combustiveis": [
+      "Flex",
+      "Gasolina",
+      "Híbrido"
+    ]
+  },
+  {
+    "id": "chevrolet-onix",
+    "marca": "Chevrolet",
+    "modelo": "Onix",
+    "carroceria": "Hatch",
+    "anos": "2013-2026",
+    "combustiveis": [
+      "Flex"
+    ]
+  },
+  {
+    "id": "fiat-strada",
+    "marca": "Fiat",
+    "modelo": "Strada",
+    "carroceria": "Picape",
+    "anos": "1998-2026",
+    "combustiveis": [
+      "Flex",
+      "Diesel"
+    ]
+  },
+  {
+    "id": "volkswagen-gol",
+    "marca": "Volkswagen",
+    "modelo": "Gol",
+    "carroceria": "Hatch",
+    "anos": "1995-2023",
+    "combustiveis": [
+      "Flex",
+      "Gasolina"
+    ]
+  }
+]
