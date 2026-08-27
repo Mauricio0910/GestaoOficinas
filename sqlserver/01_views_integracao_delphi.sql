@@ -1,6 +1,7 @@
 /*
   GestãoOficinas Pro - SQL Server 2019
   Script 01 - Views para consumo pelo ERP Delphi
+  Versão corrigida: compatível sem CREATE OR ALTER
 
   Convenção:
   - Views prefixadas com vwGO_.
@@ -11,7 +12,10 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_Clientes
+IF OBJECT_ID(N'goerp.vwGO_Clientes', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_Clientes;
+GO
+CREATE VIEW goerp.vwGO_Clientes
 AS
 SELECT
     c.TenantId,
@@ -32,7 +36,10 @@ SELECT
 FROM goerp.Clientes c;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_Veiculos
+IF OBJECT_ID(N'goerp.vwGO_Veiculos', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_Veiculos;
+GO
+CREATE VIEW goerp.vwGO_Veiculos
 AS
 SELECT
     v.TenantId,
@@ -68,7 +75,10 @@ FROM goerp.Veiculos v
 INNER JOIN goerp.Clientes c ON c.ClienteId = v.ClienteId;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_OrdensServico
+IF OBJECT_ID(N'goerp.vwGO_OrdensServico', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_OrdensServico;
+GO
+CREATE VIEW goerp.vwGO_OrdensServico
 AS
 SELECT
     os.TenantId,
@@ -115,7 +125,10 @@ INNER JOIN goerp.Clientes c ON c.ClienteId = os.ClienteId
 INNER JOIN goerp.Veiculos v ON v.VeiculoId = os.VeiculoId;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_OrdensServicoServicos
+IF OBJECT_ID(N'goerp.vwGO_OrdensServicoServicos', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_OrdensServicoServicos;
+GO
+CREATE VIEW goerp.vwGO_OrdensServicoServicos
 AS
 SELECT
     s.OrdemServicoServicoId,
@@ -137,7 +150,10 @@ FROM goerp.OrdemServicoServicos s
 INNER JOIN goerp.OrdensServico os ON os.OrdemServicoId = s.OrdemServicoId;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_OrdensServicoPecas
+IF OBJECT_ID(N'goerp.vwGO_OrdensServicoPecas', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_OrdensServicoPecas;
+GO
+CREATE VIEW goerp.vwGO_OrdensServicoPecas
 AS
 SELECT
     p.OrdemServicoPecaId,
@@ -156,7 +172,10 @@ FROM goerp.OrdemServicoPecas p
 INNER JOIN goerp.OrdensServico os ON os.OrdemServicoId = p.OrdemServicoId;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_InspecaoTecnica
+IF OBJECT_ID(N'goerp.vwGO_InspecaoTecnica', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_InspecaoTecnica;
+GO
+CREATE VIEW goerp.vwGO_InspecaoTecnica
 AS
 SELECT
     i.TenantId,
@@ -183,7 +202,10 @@ FROM goerp.InspecaoTecnicaPartes i
 INNER JOIN goerp.OrdensServico os ON os.OrdemServicoId = i.OrdemServicoId;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_ServicosAExecutar
+IF OBJECT_ID(N'goerp.vwGO_ServicosAExecutar', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_ServicosAExecutar;
+GO
+CREATE VIEW goerp.vwGO_ServicosAExecutar
 AS
 SELECT
     TenantId,
@@ -202,7 +224,10 @@ WHERE NULLIF(ServicoAExecutar,'') IS NOT NULL
   AND ISNULL(StatusServico,'A executar') NOT IN ('Concluído','CONCLUIDO','Cancelado','CANCELADO');
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_ComissoesMecanicos
+IF OBJECT_ID(N'goerp.vwGO_ComissoesMecanicos', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_ComissoesMecanicos;
+GO
+CREATE VIEW goerp.vwGO_ComissoesMecanicos
 AS
 SELECT
     os.TenantId,
@@ -217,7 +242,10 @@ INNER JOIN goerp.OrdensServico os ON os.OrdemServicoId = s.OrdemServicoId
 GROUP BY os.TenantId, s.MecanicoNome, YEAR(os.DataAberturaUtc), MONTH(os.DataAberturaUtc);
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_DashboardOficina
+IF OBJECT_ID(N'goerp.vwGO_DashboardOficina', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_DashboardOficina;
+GO
+CREATE VIEW goerp.vwGO_DashboardOficina
 AS
 SELECT
     os.TenantId,
@@ -234,7 +262,10 @@ LEFT JOIN goerp.vwGO_InspecaoTecnica i ON i.OrdemServicoId = os.OrdemServicoId
 GROUP BY os.TenantId;
 GO
 
-CREATE OR ALTER VIEW goerp.vwGO_LicencaStatus
+IF OBJECT_ID(N'goerp.vwGO_LicencaStatus', N'V') IS NOT NULL
+    DROP VIEW goerp.vwGO_LicencaStatus;
+GO
+CREATE VIEW goerp.vwGO_LicencaStatus
 AS
 SELECT
     l.LicencaId,

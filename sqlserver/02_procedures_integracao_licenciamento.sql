@@ -1,13 +1,17 @@
 /*
   GestãoOficinas Pro - SQL Server 2019
   Script 02 - Procedures de upsert, sync e licenciamento
+  Versão corrigida: compatível sem CREATE OR ALTER
 */
 
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
 
-CREATE OR ALTER PROCEDURE goerp.spGO_RegistrarSyncEvento
+IF OBJECT_ID(N'goerp.spGO_RegistrarSyncEvento', N'P') IS NOT NULL
+    DROP PROCEDURE goerp.spGO_RegistrarSyncEvento;
+GO
+CREATE PROCEDURE goerp.spGO_RegistrarSyncEvento
     @TenantId NVARCHAR(80),
     @Entidade NVARCHAR(80),
     @EntidadeId NVARCHAR(80),
@@ -23,7 +27,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE goerp.spGO_UpsertCliente
+IF OBJECT_ID(N'goerp.spGO_UpsertCliente', N'P') IS NOT NULL
+    DROP PROCEDURE goerp.spGO_UpsertCliente;
+GO
+CREATE PROCEDURE goerp.spGO_UpsertCliente
     @ClienteId UNIQUEIDENTIFIER,
     @TenantId NVARCHAR(80),
     @TipoPessoa CHAR(1),
@@ -59,7 +66,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE goerp.spGO_UpsertVeiculo
+IF OBJECT_ID(N'goerp.spGO_UpsertVeiculo', N'P') IS NOT NULL
+    DROP PROCEDURE goerp.spGO_UpsertVeiculo;
+GO
+CREATE PROCEDURE goerp.spGO_UpsertVeiculo
     @VeiculoId UNIQUEIDENTIFIER,
     @TenantId NVARCHAR(80),
     @ClienteId UNIQUEIDENTIFIER,
@@ -103,7 +113,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE goerp.spGO_UpsertOrdemServico
+IF OBJECT_ID(N'goerp.spGO_UpsertOrdemServico', N'P') IS NOT NULL
+    DROP PROCEDURE goerp.spGO_UpsertOrdemServico;
+GO
+CREATE PROCEDURE goerp.spGO_UpsertOrdemServico
     @OrdemServicoId UNIQUEIDENTIFIER,
     @TenantId NVARCHAR(80),
     @Numero BIGINT = NULL,
@@ -145,7 +158,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE goerp.spGO_RegistrarInspecaoParte
+IF OBJECT_ID(N'goerp.spGO_RegistrarInspecaoParte', N'P') IS NOT NULL
+    DROP PROCEDURE goerp.spGO_RegistrarInspecaoParte;
+GO
+CREATE PROCEDURE goerp.spGO_RegistrarInspecaoParte
     @InspecaoParteId UNIQUEIDENTIFIER,
     @OrdemServicoId UNIQUEIDENTIFIER,
     @TenantId NVARCHAR(80),
@@ -191,7 +207,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE goerp.spGO_ValidarLicenca
+IF OBJECT_ID(N'goerp.spGO_ValidarLicenca', N'P') IS NOT NULL
+    DROP PROCEDURE goerp.spGO_ValidarLicenca;
+GO
+CREATE PROCEDURE goerp.spGO_ValidarLicenca
     @ProdutoCodigo NVARCHAR(80),
     @TenantId NVARCHAR(80),
     @ChaveLicenca NVARCHAR(120),
