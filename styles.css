@@ -1,16 +1,17 @@
 :root{
-  --bg:#f3f6fb;
+  --bg:#f5f7fb;
   --panel:#ffffff;
-  --ink:#1f2937;
-  --muted:#697386;
-  --line:#dce3ee;
-  --primary:#1f4f8f;
-  --primary-2:#2f6fbe;
+  --ink:#152033;
+  --muted:#68768a;
+  --line:#dbe3ee;
+  --primary:#0f3d5e;
+  --primary-2:#176b9b;
+  --accent:#f59e0b;
   --danger:#b42318;
   --success:#137333;
   --warn:#ad6800;
-  --shadow:0 12px 30px rgba(15,23,42,.10);
-  --radius:18px;
+  --shadow:0 18px 40px rgba(15,23,42,.14);
+  --radius:20px;
 }
 *{box-sizing:border-box}
 html,body,#app{height:100%}
@@ -167,4 +168,92 @@ tr:hover td{background:#fbfdff}
 }
 @media (max-width: 560px){
   .vehicle-preview{grid-template-columns:1fr}
+}
+
+
+/* Identidade visual premium + inspeção técnica */
+.logo-pro{background:linear-gradient(145deg,#0f3d5e,#176b9b)!important;box-shadow:0 12px 26px rgba(15,61,94,.28);overflow:hidden}
+.logo-pro svg{width:52px;height:52px}
+.logo-pro rect{fill:#0f3d5e}
+.logo-pro path:nth-of-type(1){fill:#fff}
+.logo-pro circle{fill:var(--accent)}
+.logo-pro path:nth-of-type(2),.logo-pro path:nth-of-type(3){stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.login-page{background:
+  radial-gradient(circle at 25% 15%, rgba(245,158,11,.22), transparent 28%),
+  radial-gradient(circle at 88% 70%, rgba(23,107,155,.22), transparent 30%),
+  linear-gradient(135deg,#071c2c,#0f3d5e 54%,#eef5fb 54%)}
+.login-card{border:1px solid rgba(255,255,255,.62)}
+.sidebar{background:linear-gradient(180deg,#071c2c,#0f3d5e 64%,#092235)}
+.sidebar nav button{position:relative}
+.sidebar nav button.active::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:999px;background:var(--accent)}
+.card{transition:transform .16s ease,box-shadow .16s ease}
+.card:hover{box-shadow:0 12px 28px rgba(15,23,42,.08)}
+.stat{background:linear-gradient(180deg,#fff,#f9fbff)}
+.stat strong{color:var(--primary)}
+.status-chip{background:#fff7e6;color:#8a5200;border:1px solid #ffd796;border-radius:999px;padding:8px 12px;font-weight:900;font-size:12px}
+.inspection-card{padding:0;overflow:hidden}
+.inspection-card>.card-head{padding:18px 18px 0}
+.inspection-header{padding:0 18px 14px;border-bottom:1px solid var(--line)}
+.inspection-layout{display:grid;grid-template-columns:minmax(330px,.95fr) minmax(360px,1.15fr);gap:18px;padding:18px}
+.inspection-visual{background:linear-gradient(180deg,#f8fafc,#eef5fb);border:1px solid var(--line);border-radius:22px;padding:16px;position:sticky;top:12px;align-self:start}
+.vehicle-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
+.vehicle-summary span{font-weight:900;color:var(--primary)}
+.vehicle-summary b{background:#eaf4fb;color:#0f3d5e;border-radius:999px;padding:6px 10px}
+.vehicle-diagram.pro{width:100%;height:310px;min-width:0;border:0;border-radius:24px;background:
+  linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.55)),
+  repeating-linear-gradient(90deg,#e3edf7 0,#e3edf7 1px,transparent 1px,transparent 24px);
+  box-shadow:inset 0 0 0 1px #d6e2ef;overflow:hidden}
+.vehicle-kind-label{position:absolute;left:16px;bottom:14px;background:#0f3d5e;color:#fff;border-radius:999px;padding:7px 11px;font-weight:900;font-size:12px;letter-spacing:.03em}
+.parts-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.parts-toolbar h4{margin:0;font-size:17px}
+.parts-toolbar span{font-size:12px;font-weight:900;background:#eef5fb;color:var(--primary);padding:7px 10px;border-radius:999px}
+.parts-checklist{display:grid;gap:10px;max-height:650px;overflow:auto;padding-right:4px}
+.part-card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.part-card.checked{border-color:rgba(245,158,11,.68);box-shadow:0 12px 28px rgba(245,158,11,.10)}
+.part-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px}
+.part-checkline{margin:0;display:flex;flex-direction:row;align-items:center;gap:11px;font-weight:800;color:var(--ink)}
+.part-checkline input{width:20px;height:20px;accent-color:var(--accent)}
+.part-checkline span{display:flex;flex-direction:column;gap:2px}
+.part-checkline small{color:var(--muted);font-weight:700}
+.part-badge{min-width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:#edf5fb;color:var(--primary);font-weight:900}
+.part-analysis{display:none;border-top:1px solid var(--line);padding:14px;background:#fbfdff}
+.part-card.checked .part-analysis{display:block}
+.form-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.piece-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px}
+.mini-check{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;margin:0!important;font-weight:700!important}
+.mini-check input{accent-color:var(--primary)}
+.inline-option{display:flex!important;flex-direction:row!important;align-items:center!important;gap:9px!important}
+.inline-option input{accent-color:var(--accent)}
+.inspection-actions{padding:0 18px 18px}
+.car-body.suv{height:185px;top:70px;border-radius:80px 90px 50px 50px}
+.car-window.suv{height:118px;top:90px}
+.pickup-bed{position:absolute;right:95px;top:104px;width:145px;height:104px;border:3px solid #486581;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 12px #edf2f7}
+.moto-shape,.truck-shape,.bus-shape{position:absolute;inset:0}
+.moto-wheel{position:absolute;width:72px;height:72px;border-radius:50%;background:#1f2937;bottom:48px;border:12px solid #334155;box-shadow:inset 0 0 0 10px #94a3b8}
+.moto-wheel.left{left:120px}.moto-wheel.right{right:120px}
+.moto-frame{position:absolute;left:170px;right:170px;bottom:98px;height:8px;background:#0f3d5e;transform:skew(-26deg);border-radius:999px}
+.moto-tank{position:absolute;left:300px;top:118px;width:105px;height:54px;background:#fff;border:3px solid #486581;border-radius:60px 45px 30px 45px}
+.moto-seat{position:absolute;left:400px;top:120px;width:90px;height:22px;background:#1f2937;border-radius:999px}
+.moto-handle{position:absolute;left:235px;top:88px;width:70px;height:52px;border-top:7px solid #0f3d5e;border-left:7px solid #0f3d5e;transform:rotate(-18deg);border-radius:12px}
+.truck-cab{position:absolute;left:75px;top:98px;width:155px;height:120px;background:#fff;border:3px solid #486581;border-radius:28px 12px 12px 28px}
+.truck-body{position:absolute;left:230px;top:112px;width:385px;height:105px;background:#fff;border:3px solid #486581;border-radius:8px 20px 20px 8px;box-shadow:inset 0 0 0 15px #edf2f7}
+.truck-shape.with-bau .truck-body{height:145px;top:75px;border-radius:8px 20px 20px 8px}
+.truck-window{position:absolute;left:105px;top:114px;width:72px;height:45px;background:#dbeafe;border:2px solid #486581;border-radius:10px}
+.truck-wheel,.bus-wheel{position:absolute;width:62px;height:62px;background:#1f2937;border-radius:50%;bottom:58px;border:6px solid #334155}
+.truck-wheel.w1{left:115px}.truck-wheel.w2{left:345px}.truck-wheel.w3{right:120px}
+.bus-body{position:absolute;left:72px;top:82px;width:560px;height:150px;background:#fff;border:3px solid #486581;border-radius:35px 55px 28px 28px;box-shadow:inset 0 0 0 16px #edf2f7}
+.bus-front{position:absolute;right:80px;top:116px;width:65px;height:100px;border-radius:10px 38px 25px 10px;background:#eaf4fb;border-left:2px solid #486581}
+.bus-windows{position:absolute;left:115px;top:104px;width:380px;height:48px;background:repeating-linear-gradient(90deg,#dbeafe 0,#dbeafe 48px,#fff 48px,#fff 55px);border:2px solid #486581;border-radius:12px}
+.bus-door{position:absolute;right:160px;top:104px;width:50px;height:110px;border:3px solid #486581;border-radius:8px;background:#f8fafc}
+.bus-wheel.w1{left:150px}.bus-wheel.w2{right:150px}
+@media (max-width:1100px){
+  .inspection-layout{grid-template-columns:1fr}
+  .inspection-visual{position:relative;top:auto}
+  .parts-checklist{max-height:none}
+}
+@media (max-width:700px){
+  .form-grid.compact,.piece-grid{grid-template-columns:1fr}
+  .vehicle-diagram.pro{height:240px}
+  .moto-wheel{width:54px;height:54px;bottom:40px}.moto-wheel.left{left:75px}.moto-wheel.right{right:75px}
+  .truck-cab{left:40px;width:105px}.truck-body{left:145px;width:260px}.bus-body{left:38px;width:380px}
 }

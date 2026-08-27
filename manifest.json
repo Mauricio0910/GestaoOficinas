@@ -1,10 +1,10 @@
 {
-  "name": "OficinaPro OS",
-  "short_name": "OficinaPro",
+  "name": "GestãoOficinas Pro",
+  "short_name": "Oficinas Pro",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f3f6fb",
-  "theme_color": "#1f4f8f",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0f3d5e",
   "icons": [
     {
       "src": "icon-192.svg",
@@ -16,5 +16,14 @@
       "sizes": "512x512",
       "type": "image/svg+xml"
     }
-  ]
+  ],
+  "description": "Gestão de ordens de serviço, inspeção visual e checklist técnico para oficinas.",
+  "scope": "./",
+  "orientation": "any",
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
+  "lang": "pt-BR"
 }

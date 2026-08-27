@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#1f4f8f">
-  <title>OficinaPro OS</title>
+  <meta name="theme-color" content="#0f3d5e">
+  <title>GestãoOficinas Pro</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,10 +13,19 @@
     <section id="loginView" class="login-page">
       <div class="login-card">
         <div class="brand">
-          <div class="brand-mark">OP</div>
+          <div class="brand-mark logo-pro" aria-hidden="true">
+            <svg viewBox="0 0 80 80" role="img">
+              <rect x="8" y="8" width="64" height="64" rx="18"></rect>
+              <path d="M21 49c1-9 8-15 17-15h14c7 0 12 5 13 12l1 7h-6c-1 4-5 7-9 7s-8-3-9-7H31c-1 4-5 7-9 7s-8-3-9-7h8z"></path>
+              <circle cx="22" cy="53" r="5"></circle>
+              <circle cx="51" cy="53" r="5"></circle>
+              <path d="M30 34l7-10h18l8 12"></path>
+              <path d="M18 27h8M54 21l7-6M62 30h8"></path>
+            </svg>
+          </div>
           <div>
-            <h1>OficinaPro OS</h1>
-            <p>Gestão de ordens de serviço</p>
+            <h1>GestãoOficinas Pro</h1>
+            <p>Ordem de serviço inteligente para oficinas</p>
           </div>
         </div>
         <form id="loginForm">
@@ -35,9 +44,18 @@
     <section id="mainView" class="shell hidden">
       <aside class="sidebar">
         <div class="brand small">
-          <div class="brand-mark">OP</div>
+          <div class="brand-mark logo-pro" aria-hidden="true">
+            <svg viewBox="0 0 80 80" role="img">
+              <rect x="8" y="8" width="64" height="64" rx="18"></rect>
+              <path d="M21 49c1-9 8-15 17-15h14c7 0 12 5 13 12l1 7h-6c-1 4-5 7-9 7s-8-3-9-7H31c-1 4-5 7-9 7s-8-3-9-7h8z"></path>
+              <circle cx="22" cy="53" r="5"></circle>
+              <circle cx="51" cy="53" r="5"></circle>
+              <path d="M30 34l7-10h18l8 12"></path>
+              <path d="M18 27h8M54 21l7-6M62 30h8"></path>
+            </svg>
+          </div>
           <div>
-            <h1>OficinaPro</h1>
+            <h1>GestãoOficinas</h1>
             <p id="empresaNome">Oficina Modelo</p>
           </div>
         </div>
@@ -64,6 +82,7 @@
           </div>
           <div class="top-actions">
             <span id="currentUserBadge" class="badge"></span>
+            <button id="btnInstallApp" class="btn ghost hidden">Instalar app</button>
             <button id="btnLogout" class="btn ghost">Sair</button>
           </div>
         </header>
@@ -181,6 +200,9 @@
             <form id="formIdentificaVeiculo" class="form-grid">
               <label>Placa
                 <input name="placa" maxlength="8" placeholder="ABC1D23">
+              </label>
+              <label>Tipo
+                <select name="tipoVeiculo"></select>
               </label>
               <label>Marca
                 <select name="marca"></select>

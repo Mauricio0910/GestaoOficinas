@@ -1,0 +1,26 @@
+{
+  "tiposVeiculo": [
+    "MOTO",
+    "AUTOMOVEL",
+    "SUV",
+    "CAMINHONETE",
+    "CAMINHAO_TOCO",
+    "CAMINHAO_BAU",
+    "ONIBUS"
+  ],
+  "exemploParte": {
+    "tipoVeiculo": "AUTOMOVEL",
+    "key": "farol_esquerdo",
+    "nome": "Farol esquerdo",
+    "grupo": "Iluminação",
+    "pecas": [
+      "Farol esquerdo",
+      "Lâmpada farol esquerdo",
+      "Chicote do farol"
+    ],
+    "servicos": [
+      "Substituir farol esquerdo",
+      "Revisar chicote do farol esquerdo"
+    ]
+  }
+}

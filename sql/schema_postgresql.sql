@@ -234,3 +234,60 @@ CREATE INDEX idx_checklist_marcacoes_tipo ON checklist_marcacoes (area_veiculo, 
 CREATE INDEX idx_clientes_empresa_nome ON clientes (id_empresa, nome_razao);
 CREATE INDEX idx_logs_empresa_data ON logs_auditoria (id_empresa, criado_em DESC);
 CREATE INDEX idx_consultas_veiculares_empresa_data ON consultas_veiculares (id_empresa, criado_em DESC);
+
+
+
+-- Atualização: catálogo técnico de inspeção por tipo de veículo
+ALTER TABLE veiculos
+ADD COLUMN IF NOT EXISTS tipo_veiculo VARCHAR(30) DEFAULT 'AUTOMOVEL';
+
+ALTER TABLE ordens_servico
+ADD COLUMN IF NOT EXISTS tipo_veiculo VARCHAR(30);
+
+CREATE TABLE IF NOT EXISTS catalogo_partes_veiculo (
+    id_parte UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tipo_veiculo VARCHAR(30) NOT NULL,
+    chave_parte VARCHAR(80) NOT NULL,
+    nome VARCHAR(120) NOT NULL,
+    grupo VARCHAR(80),
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (tipo_veiculo, chave_parte)
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_pecas_por_parte (
+    id_catalogo_peca UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tipo_veiculo VARCHAR(30) NOT NULL,
+    chave_parte VARCHAR(80) NOT NULL,
+    descricao VARCHAR(150) NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_servicos_por_parte (
+    id_catalogo_servico UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tipo_veiculo VARCHAR(30) NOT NULL,
+    chave_parte VARCHAR(80) NOT NULL,
+    descricao VARCHAR(150) NOT NULL,
+    valor_padrao NUMERIC(12,2) DEFAULT 0,
+    tempo_estimado_min INTEGER,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+ALTER TABLE checklist_marcacoes
+ADD COLUMN IF NOT EXISTS chave_parte VARCHAR(80),
+ADD COLUMN IF NOT EXISTS grupo VARCHAR(80),
+ADD COLUMN IF NOT EXISTS pecas_selecionadas JSONB,
+ADD COLUMN IF NOT EXISTS servico_selecionado VARCHAR(150),
+ADD COLUMN IF NOT EXISTS servico_customizado VARCHAR(150),
+ADD COLUMN IF NOT EXISTS status_servico VARCHAR(40) DEFAULT 'A executar';
+
+ALTER TABLE os_servicos
+ADD COLUMN IF NOT EXISTS parte_veiculo VARCHAR(120),
+ADD COLUMN IF NOT EXISTS defeito_encontrado VARCHAR(120),
+ADD COLUMN IF NOT EXISTS status_execucao VARCHAR(40),
+ADD COLUMN IF NOT EXISTS origem_marcacao_id UUID;
+
+ALTER TABLE os_pecas
+ADD COLUMN IF NOT EXISTS parte_veiculo VARCHAR(120),
+ADD COLUMN IF NOT EXISTS defeito_encontrado VARCHAR(120),
+ADD COLUMN IF NOT EXISTS status_cotacao VARCHAR(40),
+ADD COLUMN IF NOT EXISTS origem_marcacao_id UUID;

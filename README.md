@@ -135,3 +135,38 @@ Veja detalhes em `docs/ERRO_FIREBASE_PERMISSOES.md`.
 - Checklist visual aprimorado para o mecânico marcar área, tipo de defeito, gravidade, status e observação.
 - Coleção `catalogoVeiculos` preparada para Firebase/Firestore.
 - Documento técnico em `docs/incremento-dashboard-veiculos-checklist.md`.
+
+
+## Atualização: inspeção técnica visual por tipo de veículo
+
+Esta versão inclui:
+
+- Dashboard com indicadores operacionais.
+- Cadastro de veículos com tipo: moto, automóvel, SUV, caminhonete, caminhão toco, caminhão baú e ônibus.
+- Catálogo local de veículos ampliado.
+- Aba de OS com inspeção técnica visual por categoria de veículo.
+- Imagem/diagrama do veículo conforme o tipo selecionado.
+- Checklist por partes do veículo.
+- Para cada parte marcada:
+  - tipo de defeito;
+  - gravidade;
+  - status;
+  - problema relatado;
+  - peças sugeridas;
+  - serviço sugerido;
+  - cadastro de novo serviço a executar.
+- Botão para gerar serviços e peças diretamente na OS a partir da inspeção.
+- PWA com botão de instalação quando o navegador permitir.
+- Logo e layout visual atualizados.
+
+### Importante ao atualizar em um projeto já conectado ao Firebase
+
+Se o seu `firebase-config.js` já está preenchido com os dados reais do Firebase, não substitua esse arquivo por uma versão com `COLE_AQUI`.
+
+Ao atualizar pelo Codespaces, prefira manter o arquivo existente:
+
+```bash
+unzip -o gestao-oficinas-pro-inspecao-app.zip -x "oficina-os-pwa/firebase-config.js"
+```
+
+Ou, se substituir sem querer, cole novamente os dados do Firebase.

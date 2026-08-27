@@ -23,6 +23,7 @@ let db = null;
 let currentUser = null;
 let activeTab = 'dashboard';
 let signatureCanvasState = null;
+let deferredInstallPrompt = null;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindGlobalEvents();
     restoreSession();
     registerServiceWorker();
+    bindInstallPrompt();
     updateStorageStatus();
   } catch (err) {
     console.error(err);
@@ -93,6 +95,181 @@ const DEFECT_TYPES = [
   'Pneu danificado', 'Vazamento', 'Barulho', 'Falha elétrica', 'Falha mecânica',
   'Peça ausente', 'Desgaste', 'Folga', 'Superaquecimento', 'Outro'
 ];
+
+const VEHICLE_TYPE_LABELS = {
+  MOTO: 'Moto',
+  AUTOMOVEL: 'Automóvel',
+  SUV: 'SUV',
+  CAMINHONETE: 'Caminhonete',
+  CAMINHAO_TOCO: 'Caminhão toco',
+  CAMINHAO_BAU: 'Caminhão baú',
+  ONIBUS: 'Ônibus'
+};
+
+const VEHICLE_TYPE_HINTS = {
+  MOTO: 'Checklist compacto para guidão, rodas, motor, relação e carenagens.',
+  AUTOMOVEL: 'Carro de passeio com lataria, iluminação, motor, freios, suspensão e interior.',
+  SUV: 'Utilitário esportivo com análise de carroceria alta, suspensão, porta-malas e transmissão.',
+  CAMINHONETE: 'Picape/caminhonete com caçamba, suspensão reforçada, diferencial e cabine.',
+  CAMINHAO_TOCO: 'Caminhão rígido/toco com cabine, chassi, eixo, freios pneumáticos e carga.',
+  CAMINHAO_BAU: 'Caminhão baú com inspeção adicional de baú, portas, vedação e estrutura.',
+  ONIBUS: 'Ônibus com foco em portas, carroceria, bancos, freios, elétrica e segurança.'
+};
+
+const PART_POSITIONS = {
+  dianteira: [15, 54], parachoque_dianteiro: [15, 64], capo: [28, 43], farol_esquerdo: [18, 38], farol_direito: [18, 68],
+  parabrisa: [38, 35], teto: [52, 25], porta_dianteira_esquerda: [48, 50], porta_traseira_esquerda: [60, 50],
+  porta_dianteira_direita: [48, 69], porta_traseira_direita: [60, 69], retrovisor_esquerdo: [40, 43], retrovisor_direito: [40, 74],
+  lateral_esquerda: [55, 45], lateral_direita: [55, 75], traseira: [84, 55], tampa_traseira: [80, 45], parachoque_traseiro: [86, 67],
+  roda_dianteira: [28, 80], roda_traseira: [72, 80], pneus: [50, 83], suspensao_dianteira: [30, 88], suspensao_traseira: [73, 88],
+  freios: [49, 88], motor: [27, 54], cambio: [43, 57], escapamento: [69, 92], bateria: [25, 34], radiador: [18, 50],
+  ar_condicionado: [40, 30], interior: [55, 37], painel: [42, 38], sistema_eletrico: [50, 58],
+  guidao: [26, 35], tanque: [46, 42], banco: [61, 40], carenagem: [46, 60], relacao: [66, 76], escapamento_moto: [62, 68],
+  cabine: [30, 45], bau: [66, 40], carroceria: [67, 55], chassi: [54, 78], eixo_dianteiro: [35, 83], eixo_traseiro: [72, 83],
+  diferencial: [66, 78], sistema_pneumatico: [50, 84], embreagem: [39, 62], direcao: [31, 56],
+  portas_onibus: [38, 60], bancos: [58, 42], saida_emergencia: [70, 35], iluminacao: [21, 45], arrefecimento: [24, 58]
+};
+
+function makePart(key, nome, grupo, pecas = [], servicos = []) {
+  return { key, nome, grupo, pecas, servicos };
+}
+
+function inspectionCatalogByType() {
+  const auto = [
+    makePart('parachoque_dianteiro', 'Para-choque dianteiro', 'Lataria', ['Capa do para-choque', 'Grade frontal', 'Suporte do para-choque'], ['Reparar para-choque dianteiro', 'Substituir suporte do para-choque']),
+    makePart('capo', 'Capô', 'Lataria', ['Capô', 'Dobradiça do capô', 'Fechadura do capô'], ['Regular capô', 'Reparar amassado no capô']),
+    makePart('farol_esquerdo', 'Farol esquerdo', 'Iluminação', ['Farol esquerdo', 'Lâmpada farol esquerdo', 'Chicote do farol'], ['Substituir farol esquerdo', 'Revisar chicote do farol esquerdo']),
+    makePart('farol_direito', 'Farol direito', 'Iluminação', ['Farol direito', 'Lâmpada farol direito', 'Chicote do farol'], ['Substituir farol direito', 'Revisar chicote do farol direito']),
+    makePart('parabrisa', 'Para-brisa', 'Vidros', ['Para-brisa', 'Guarnição do para-brisa', 'Palheta do limpador'], ['Substituir para-brisa', 'Regular limpador de para-brisa']),
+    makePart('teto', 'Teto', 'Lataria', ['Forro do teto', 'Longarina superior', 'Borracha de vedação'], ['Reparar teto', 'Revisar vedação do teto']),
+    makePart('porta_dianteira_esquerda', 'Porta dianteira esquerda', 'Portas', ['Porta dianteira esquerda', 'Maçaneta', 'Máquina de vidro', 'Fechadura'], ['Regular porta dianteira esquerda', 'Substituir máquina de vidro']),
+    makePart('porta_dianteira_direita', 'Porta dianteira direita', 'Portas', ['Porta dianteira direita', 'Maçaneta', 'Máquina de vidro', 'Fechadura'], ['Regular porta dianteira direita', 'Substituir máquina de vidro']),
+    makePart('porta_traseira_esquerda', 'Porta traseira esquerda', 'Portas', ['Porta traseira esquerda', 'Maçaneta', 'Máquina de vidro'], ['Regular porta traseira esquerda']),
+    makePart('porta_traseira_direita', 'Porta traseira direita', 'Portas', ['Porta traseira direita', 'Maçaneta', 'Máquina de vidro'], ['Regular porta traseira direita']),
+    makePart('retrovisor_esquerdo', 'Retrovisor esquerdo', 'Acessórios', ['Retrovisor esquerdo', 'Capa do retrovisor', 'Pisca do retrovisor'], ['Substituir retrovisor esquerdo']),
+    makePart('retrovisor_direito', 'Retrovisor direito', 'Acessórios', ['Retrovisor direito', 'Capa do retrovisor', 'Pisca do retrovisor'], ['Substituir retrovisor direito']),
+    makePart('tampa_traseira', 'Tampa traseira / porta-malas', 'Lataria', ['Tampa traseira', 'Amortecedor da tampa', 'Fechadura do porta-malas'], ['Regular tampa traseira', 'Substituir amortecedor da tampa']),
+    makePart('parachoque_traseiro', 'Para-choque traseiro', 'Lataria', ['Capa do para-choque traseiro', 'Sensor de estacionamento', 'Suporte traseiro'], ['Reparar para-choque traseiro']),
+    makePart('pneus', 'Pneus e rodas', 'Rodagem', ['Pneu', 'Roda', 'Bico da roda', 'Calota'], ['Balanceamento', 'Alinhamento', 'Substituir pneu']),
+    makePart('suspensao_dianteira', 'Suspensão dianteira', 'Suspensão', ['Amortecedor dianteiro', 'Bieleta', 'Bucha da bandeja', 'Pivô'], ['Revisar suspensão dianteira', 'Substituir amortecedor dianteiro']),
+    makePart('suspensao_traseira', 'Suspensão traseira', 'Suspensão', ['Amortecedor traseiro', 'Mola traseira', 'Bucha do eixo'], ['Revisar suspensão traseira']),
+    makePart('freios', 'Freios', 'Segurança', ['Pastilha de freio', 'Disco de freio', 'Fluido de freio', 'Cilindro mestre'], ['Revisar sistema de freios', 'Substituir pastilhas de freio']),
+    makePart('motor', 'Motor', 'Mecânica', ['Velas', 'Correia', 'Bomba d’água', 'Junta', 'Coxim do motor'], ['Diagnóstico do motor', 'Corrigir vazamento do motor']),
+    makePart('cambio', 'Câmbio / transmissão', 'Mecânica', ['Óleo de câmbio', 'Embreagem', 'Semi-eixo', 'Trambulador'], ['Diagnóstico de transmissão', 'Substituir kit de embreagem']),
+    makePart('bateria', 'Bateria / elétrica', 'Elétrica', ['Bateria', 'Alternador', 'Motor de partida', 'Fusíveis'], ['Teste de carga da bateria', 'Revisão elétrica']),
+    makePart('radiador', 'Radiador / arrefecimento', 'Arrefecimento', ['Radiador', 'Mangueira', 'Aditivo', 'Válvula termostática'], ['Revisar arrefecimento', 'Substituir radiador']),
+    makePart('ar_condicionado', 'Ar-condicionado', 'Conforto', ['Filtro cabine', 'Compressor', 'Gás refrigerante', 'Condensador'], ['Higienização do ar', 'Diagnóstico do ar-condicionado']),
+    makePart('interior', 'Interior / acabamento', 'Interior', ['Banco', 'Painel', 'Forração', 'Cinto de segurança'], ['Reparar acabamento interno', 'Revisar cinto de segurança'])
+  ];
+
+  const moto = [
+    makePart('guidao', 'Guidão e comandos', 'Direção', ['Guidão', 'Manete', 'Cabo de acelerador', 'Retrovisor'], ['Regular guidão', 'Substituir manete']),
+    makePart('farol_esquerdo', 'Farol / iluminação', 'Iluminação', ['Farol', 'Lâmpada', 'Chicote'], ['Revisar iluminação', 'Substituir farol']),
+    makePart('painel', 'Painel', 'Elétrica', ['Painel', 'Sensor de velocidade', 'Chicote'], ['Diagnosticar painel']),
+    makePart('tanque', 'Tanque', 'Carroceria', ['Tanque', 'Tampa do tanque', 'Mangueira'], ['Reparar tanque', 'Corrigir vazamento']),
+    makePart('banco', 'Banco', 'Conforto', ['Banco', 'Trava do banco', 'Capa do banco'], ['Reparar banco']),
+    makePart('carenagem', 'Carenagens', 'Acabamento', ['Carenagem lateral', 'Paralama', 'Suporte'], ['Reparar carenagem', 'Substituir carenagem']),
+    makePart('motor', 'Motor', 'Mecânica', ['Vela', 'Filtro de ar', 'Óleo', 'Junta'], ['Revisão do motor', 'Troca de óleo']),
+    makePart('relacao', 'Relação', 'Transmissão', ['Corrente', 'Coroa', 'Pinhão'], ['Ajustar relação', 'Substituir kit relação']),
+    makePart('freios', 'Freios', 'Segurança', ['Pastilha', 'Lona', 'Disco', 'Fluido'], ['Revisar freios', 'Substituir pastilhas']),
+    makePart('roda_dianteira', 'Pneu/roda dianteira', 'Rodagem', ['Pneu dianteiro', 'Roda dianteira', 'Raio'], ['Substituir pneu dianteiro']),
+    makePart('roda_traseira', 'Pneu/roda traseira', 'Rodagem', ['Pneu traseiro', 'Roda traseira', 'Raio'], ['Substituir pneu traseiro']),
+    makePart('suspensao_dianteira', 'Suspensão dianteira', 'Suspensão', ['Bengala', 'Retentor', 'Óleo da suspensão'], ['Revisar bengalas']),
+    makePart('suspensao_traseira', 'Suspensão traseira', 'Suspensão', ['Amortecedor traseiro', 'Balança', 'Bucha'], ['Revisar suspensão traseira']),
+    makePart('escapamento_moto', 'Escapamento', 'Exaustão', ['Escapamento', 'Junta', 'Protetor térmico'], ['Reparar escapamento'])
+  ];
+
+  const pesado = [
+    makePart('cabine', 'Cabine', 'Estrutura', ['Cabine', 'Fechadura', 'Maçaneta', 'Amortecedor da cabine'], ['Revisar cabine', 'Regular fechamento da cabine']),
+    makePart('parabrisa', 'Para-brisa', 'Vidros', ['Para-brisa', 'Borracha', 'Palhetas'], ['Substituir para-brisa']),
+    makePart('portas_onibus', 'Portas / acesso', 'Acesso', ['Porta', 'Dobradiça', 'Sistema pneumático da porta'], ['Regular portas', 'Revisar acionamento pneumático']),
+    makePart('retrovisor_esquerdo', 'Retrovisores', 'Segurança', ['Retrovisor', 'Suporte do retrovisor', 'Lente'], ['Substituir retrovisor']),
+    makePart('motor', 'Motor diesel', 'Mecânica', ['Filtro diesel', 'Correia', 'Bomba', 'Mangueira', 'Coxim'], ['Diagnóstico do motor diesel', 'Revisão preventiva']),
+    makePart('cambio', 'Câmbio', 'Mecânica', ['Óleo de câmbio', 'Embreagem', 'Cardan'], ['Diagnosticar câmbio', 'Revisar transmissão']),
+    makePart('eixo_dianteiro', 'Eixo dianteiro', 'Chassi', ['Eixo dianteiro', 'Rolamento', 'Manga de eixo'], ['Revisar eixo dianteiro']),
+    makePart('eixo_traseiro', 'Eixo traseiro', 'Chassi', ['Eixo traseiro', 'Rolamento', 'Diferencial'], ['Revisar eixo traseiro']),
+    makePart('diferencial', 'Diferencial', 'Transmissão', ['Diferencial', 'Óleo diferencial', 'Retentor'], ['Revisar diferencial']),
+    makePart('suspensao_dianteira', 'Suspensão', 'Suspensão', ['Mola', 'Amortecedor', 'Bucha', 'Barra estabilizadora'], ['Revisar suspensão pesada']),
+    makePart('freios', 'Freios pneumáticos', 'Segurança', ['Lona', 'Cuíca', 'Válvula', 'Tambor', 'Reservatório de ar'], ['Revisar freio pneumático', 'Substituir lonas de freio']),
+    makePart('pneus', 'Pneus', 'Rodagem', ['Pneu', 'Roda', 'Porca', 'Cubo'], ['Inspecionar pneus', 'Rodízio de pneus']),
+    makePart('sistema_eletrico', 'Sistema elétrico', 'Elétrica', ['Bateria', 'Alternador', 'Chicote', 'Fusíveis'], ['Revisão elétrica pesada']),
+    makePart('iluminacao', 'Iluminação externa', 'Elétrica', ['Farol', 'Lanterna', 'Lâmpada', 'Chicote'], ['Revisar iluminação']),
+    makePart('sistema_pneumatico', 'Sistema pneumático', 'Pneumático', ['Mangueira de ar', 'Compressor', 'Válvula', 'Reservatório'], ['Teste de vazamento pneumático']),
+    makePart('direcao', 'Direção', 'Segurança', ['Caixa de direção', 'Terminal', 'Barra de direção'], ['Revisar direção']),
+    makePart('arrefecimento', 'Arrefecimento', 'Arrefecimento', ['Radiador', 'Mangueira', 'Aditivo', 'Ventoinha'], ['Revisar arrefecimento'])
+  ];
+
+  return {
+    MOTO: moto,
+    AUTOMOVEL: auto,
+    SUV: auto,
+    CAMINHONETE: [
+      ...auto,
+      makePart('carroceria', 'Caçamba / carroceria', 'Carga', ['Tampa da caçamba', 'Protetor de caçamba', 'Santo Antônio'], ['Reparar caçamba', 'Regular tampa da caçamba']),
+      makePart('diferencial', 'Diferencial', 'Transmissão', ['Diferencial', 'Óleo diferencial', 'Retentor'], ['Revisar diferencial'])
+    ],
+    CAMINHAO_TOCO: pesado,
+    CAMINHAO_BAU: [
+      ...pesado,
+      makePart('bau', 'Baú / compartimento de carga', 'Carga', ['Porta do baú', 'Vedação do baú', 'Assoalho', 'Dobradiça'], ['Reparar baú', 'Trocar vedação do baú'])
+    ],
+    ONIBUS: [
+      ...pesado,
+      makePart('bancos', 'Bancos passageiros', 'Interior', ['Banco passageiro', 'Cinto', 'Fixação'], ['Reparar banco de passageiros']),
+      makePart('saida_emergencia', 'Saídas de emergência', 'Segurança', ['Martelo emergência', 'Janela emergência', 'Sinalização'], ['Revisar saídas de emergência'])
+    ]
+  };
+}
+
+function vehicleTypeOptions(selected = '') {
+  return Object.entries(VEHICLE_TYPE_LABELS)
+    .map(([key, label]) => `<option value="${key}" ${selected === key ? 'selected' : ''}>${label}</option>`)
+    .join('');
+}
+
+function inferVehicleType(vOrCatalog = {}) {
+  if (!vOrCatalog) return 'AUTOMOVEL';
+  if (vOrCatalog.tipoVeiculo && VEHICLE_TYPE_LABELS[vOrCatalog.tipoVeiculo]) return vOrCatalog.tipoVeiculo;
+  const text = `${vOrCatalog.carroceria || ''} ${vOrCatalog.modelo || ''} ${vOrCatalog.marca || ''}`.toLowerCase();
+  if (text.includes('moto') || text.includes('cg ') || text.includes('biz') || text.includes('factor') || text.includes('fan')) return 'MOTO';
+  if (text.includes('ônibus') || text.includes('onibus') || text.includes('bus')) return 'ONIBUS';
+  if (text.includes('baú') || text.includes('bau')) return 'CAMINHAO_BAU';
+  if (text.includes('caminhão') || text.includes('caminhao') || text.includes('truck') || text.includes('toco') || text.includes('accelo') || text.includes('delivery')) return 'CAMINHAO_TOCO';
+  if (text.includes('picape') || text.includes('pickup') || text.includes('hilux') || text.includes('ranger') || text.includes('s10') || text.includes('strada') || text.includes('toro')) return 'CAMINHONETE';
+  if (text.includes('suv') || text.includes('sw4') || text.includes('tracker') || text.includes('compass') || text.includes('hr-v') || text.includes('renegade')) return 'SUV';
+  return 'AUTOMOVEL';
+}
+
+function getInspectionParts(tipoVeiculo) {
+  const catalog = inspectionCatalogByType();
+  return catalog[tipoVeiculo] || catalog.AUTOMOVEL;
+}
+
+function getPartByKey(tipoVeiculo, key) {
+  return getInspectionParts(tipoVeiculo).find(p => p.key === key);
+}
+
+function additionalVehicleCatalog() {
+  return [
+    { id: 'honda-cg160', marca: 'Honda', modelo: 'CG 160', carroceria: 'Moto', tipoVeiculo: 'MOTO', anos: years(2016, 2026), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'honda-biz125', marca: 'Honda', modelo: 'Biz 125', carroceria: 'Moto', tipoVeiculo: 'MOTO', anos: years(2006, 2026), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'yamaha-factor150', marca: 'Yamaha', modelo: 'Factor 150', carroceria: 'Moto', tipoVeiculo: 'MOTO', anos: years(2016, 2026), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'yamaha-fazer250', marca: 'Yamaha', modelo: 'Fazer 250', carroceria: 'Moto', tipoVeiculo: 'MOTO', anos: years(2005, 2026), combustiveis: ['Flex', 'Gasolina'] },
+    { id: 'mercedes-accelo815', marca: 'Mercedes-Benz', modelo: 'Accelo 815', carroceria: 'Caminhão toco', tipoVeiculo: 'CAMINHAO_TOCO', anos: years(2004, 2026), combustiveis: ['Diesel'] },
+    { id: 'vw-delivery11180', marca: 'Volkswagen', modelo: 'Delivery 11.180', carroceria: 'Caminhão toco', tipoVeiculo: 'CAMINHAO_TOCO', anos: years(2018, 2026), combustiveis: ['Diesel'] },
+    { id: 'iveco-daily-bau', marca: 'Iveco', modelo: 'Daily Baú', carroceria: 'Caminhão baú', tipoVeiculo: 'CAMINHAO_BAU', anos: years(2008, 2026), combustiveis: ['Diesel'] },
+    { id: 'ford-cargo-bau', marca: 'Ford', modelo: 'Cargo Baú', carroceria: 'Caminhão baú', tipoVeiculo: 'CAMINHAO_BAU', anos: years(1998, 2019), combustiveis: ['Diesel'] },
+    { id: 'marcopolo-volare', marca: 'Marcopolo', modelo: 'Volare', carroceria: 'Ônibus', tipoVeiculo: 'ONIBUS', anos: years(1998, 2026), combustiveis: ['Diesel'] },
+    { id: 'mercedes-of1721', marca: 'Mercedes-Benz', modelo: 'OF 1721', carroceria: 'Ônibus', tipoVeiculo: 'ONIBUS', anos: years(2000, 2026), combustiveis: ['Diesel'] }
+  ];
+}
+
+function mergeCatalogs(base = []) {
+  const all = [...base, ...additionalVehicleCatalog()];
+  const map = new Map();
+  all.forEach(item => map.set(item.id, { ...item, tipoVeiculo: item.tipoVeiculo || inferVehicleType(item) }));
+  return [...map.values()].sort((a,b) => `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`, 'pt-BR'));
+}
 
 function years(from, to = 2026) {
   const out = [];
@@ -180,11 +357,16 @@ function normalizeDb(database) {
   d.pecas = Array.isArray(d.pecas) ? d.pecas : [];
   d.ordens = Array.isArray(d.ordens) ? d.ordens : [];
   d.logs = Array.isArray(d.logs) ? d.logs : [];
-  d.catalogoVeiculos = Array.isArray(d.catalogoVeiculos) && d.catalogoVeiculos.length ? d.catalogoVeiculos : vehicleCatalog();
+  d.catalogoVeiculos = mergeCatalogs(Array.isArray(d.catalogoVeiculos) && d.catalogoVeiculos.length ? d.catalogoVeiculos : vehicleCatalog());
+  const defaultPartCatalog = Object.entries(inspectionCatalogByType()).flatMap(([tipoVeiculo, partes]) => partes.map(p => ({ ...p, tipoVeiculo, id: `${tipoVeiculo}-${p.key}` })));
+  d.catalogoPartes = Array.isArray(d.catalogoPartes) && d.catalogoPartes.length ? d.catalogoPartes : defaultPartCatalog;
+  d.catalogoPecas = Array.isArray(d.catalogoPecas) ? d.catalogoPecas : [];
+  d.servicosCatalogo = Array.isArray(d.servicosCatalogo) ? d.servicosCatalogo : [];
 
   d.veiculos.forEach(v => {
     v.origemDados = v.origemDados || 'MANUAL';
     v.catalogoId = v.catalogoId || '';
+    v.tipoVeiculo = v.tipoVeiculo || inferVehicleType(v);
   });
 
   d.ordens.forEach(o => {
@@ -199,6 +381,11 @@ function normalizeDb(database) {
         m.gravidade = m.gravidade || 'Leve';
         m.status = m.status || 'Pendente';
         m.fotoUrl = m.fotoUrl || '';
+        m.parteKey = m.parteKey || '';
+        m.pecasSelecionadas = Array.isArray(m.pecasSelecionadas) ? m.pecasSelecionadas : [];
+        m.servicoSelecionado = m.servicoSelecionado || '';
+        m.servicoCustomizado = m.servicoCustomizado || '';
+        m.statusServico = m.statusServico || 'A executar';
       });
     }
   });
@@ -207,20 +394,22 @@ function normalizeDb(database) {
 }
 
 function getVehicleCatalog() {
-  return Array.isArray(db?.catalogoVeiculos) && db.catalogoVeiculos.length ? db.catalogoVeiculos : vehicleCatalog();
+  return mergeCatalogs(Array.isArray(db?.catalogoVeiculos) && db.catalogoVeiculos.length ? db.catalogoVeiculos : vehicleCatalog());
 }
 
 function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
 }
 
-function getCatalogMarcas() {
-  return uniqueSorted(getVehicleCatalog().map(v => v.marca));
+function getCatalogMarcas(tipoVeiculo = '') {
+  return uniqueSorted(getVehicleCatalog()
+    .filter(v => !tipoVeiculo || inferVehicleType(v) === tipoVeiculo)
+    .map(v => v.marca));
 }
 
-function getCatalogModelos(marca) {
+function getCatalogModelos(marca, tipoVeiculo = '') {
   return getVehicleCatalog()
-    .filter(v => !marca || v.marca === marca)
+    .filter(v => (!marca || v.marca === marca) && (!tipoVeiculo || inferVehicleType(v) === tipoVeiculo))
     .sort((a, b) => `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`, 'pt-BR'));
 }
 
@@ -280,7 +469,10 @@ function demoDb() {
       comissaoPadrao: 10
     },
     session: null,
-    catalogoVeiculos: vehicleCatalog(),
+    catalogoVeiculos: mergeCatalogs(vehicleCatalog()),
+    catalogoPartes: Object.entries(inspectionCatalogByType()).flatMap(([tipoVeiculo, partes]) => partes.map(p => ({ ...p, tipoVeiculo, id: `${tipoVeiculo}-${p.key}` }))),
+    catalogoPecas: [],
+    servicosCatalogo: [],
     users: [
       { id: adminId, nome: 'Administrador', email: 'admin@oficina.com', senha: 'admin123', perfil: 'ADMIN', ativo: true, criadoEm: nowIso() },
       { id: mecId, nome: 'João Mecânico', email: 'mecanico@oficina.com', senha: '123456', perfil: 'MECANICO', ativo: true, criadoEm: nowIso() }
@@ -290,8 +482,8 @@ function demoDb() {
       { id: cli2, tipoPessoa: 'F', nome: 'Mariana Costa', cpfCnpj: '22233344455', telefone: '(11) 97777-2000', whatsapp: '(11) 97777-2000', email: 'mariana@email.com', endereco: 'Rua B, 20', consentimentoLgpd: true, criadoEm: nowIso() }
     ],
     veiculos: [
-      { id: vei1, clienteId: cli1, placa: 'ABC1D23', chassi: '', renavam: '', catalogoId: 'toyota-corolla', marca: 'Toyota', modelo: 'Corolla', anoFabricacao: 2019, anoModelo: 2020, cor: 'Prata', combustivel: 'Flex', kmAtual: 65800, origemDados: 'MANUAL', criadoEm: nowIso() },
-      { id: vei2, clienteId: cli2, placa: 'XYZ9A87', chassi: '', renavam: '', catalogoId: 'honda-civic', marca: 'Honda', modelo: 'Civic', anoFabricacao: 2018, anoModelo: 2018, cor: 'Preto', combustivel: 'Flex', kmAtual: 82500, origemDados: 'MANUAL', criadoEm: nowIso() }
+      { id: vei1, clienteId: cli1, placa: 'ABC1D23', chassi: '', renavam: '', catalogoId: 'toyota-corolla', marca: 'Toyota', modelo: 'Corolla', anoFabricacao: 2019, anoModelo: 2020, cor: 'Prata', combustivel: 'Flex', kmAtual: 65800, origemDados: 'MANUAL', tipoVeiculo: 'AUTOMOVEL', criadoEm: nowIso() },
+      { id: vei2, clienteId: cli2, placa: 'XYZ9A87', chassi: '', renavam: '', catalogoId: 'honda-civic', marca: 'Honda', modelo: 'Civic', anoFabricacao: 2018, anoModelo: 2018, cor: 'Preto', combustivel: 'Flex', kmAtual: 82500, origemDados: 'MANUAL', tipoVeiculo: 'AUTOMOVEL', criadoEm: nowIso() }
     ],
     servicos: [
       { id: serv1, descricao: 'Troca de óleo e filtro', valorPadrao: 120, garantiaDias: 30, comissaoPercentual: 5, ativo: true },
@@ -728,6 +920,7 @@ function renderOsCard(o) {
         <h3 class="os-title">OS #${o.numero} · ${escapeHtml(c?.nome || 'Cliente não encontrado')}</h3>
         <div class="os-meta">
           <span>${escapeHtml(v?.marca || '')} ${escapeHtml(v?.modelo || '')}</span>
+          <span>${escapeHtml(VEHICLE_TYPE_LABELS[o.tipoVeiculo || v?.tipoVeiculo || inferVehicleType(v)] || 'Automóvel')}</span>
           <span>Placa: <b>${escapeHtml(v?.placa || '-')}</b></span>
           <span>Abertura: ${formatDateShort(o.dataAbertura)}</span>
           <span>Total: <b>${money(totals.total)}</b></span>
@@ -832,6 +1025,7 @@ function openOsForm(existing = null) {
           numero: nextOsNumber(),
           clienteId: fd.get('clienteId'),
           veiculoId: fd.get('veiculoId'),
+          tipoVeiculo: getVeiculo(fd.get('veiculoId'))?.tipoVeiculo || inferVehicleType(getVeiculo(fd.get('veiculoId'))),
           status: 'ABERTA',
           kmEntrada: Number(fd.get('kmEntrada') || 0),
           reclamacao: fd.get('reclamacao'),
@@ -874,7 +1068,7 @@ function openOsDetails(os) {
     <div class="tabs-mini">
       <button class="btn small primary" data-mini="resumo">Resumo</button>
       <button class="btn small" data-mini="itens">Serviços/Peças</button>
-      <button class="btn small" data-mini="checklist">Checklist</button>
+      <button class="btn small" data-mini="checklist">Inspeção técnica</button>
       <button class="btn small" data-mini="assinatura">Assinatura</button>
       <button class="btn small" data-mini="garantia">Garantia</button>
     </div>
@@ -1077,126 +1271,305 @@ function renderItensOsTable(os) {
   }));
 }
 
-function renderChecklistHtml(os) {
-  const entrada = os.checklist?.entrada || { combustivel: 50, estepe: true, macaco: true, chaveRoda: true, observacoes: '', marcacoes: [], assinatura: '' };
-  const areaOpts = DEFECT_AREAS.map(a => `<option>${escapeHtml(a)}</option>`).join('');
-  const tipoOpts = DEFECT_TYPES.map(t => `<option>${escapeHtml(t)}</option>`).join('');
+
+function vehicleImageClass(tipoVeiculo) {
+  return `vehicle-${String(tipoVeiculo || 'AUTOMOVEL').toLowerCase().replaceAll('_','-')}`;
+}
+
+function vehicleSilhouetteHtml(tipoVeiculo) {
+  const label = VEHICLE_TYPE_LABELS[tipoVeiculo] || 'Automóvel';
+  if (tipoVeiculo === 'MOTO') {
+    return `
+      <div class="moto-shape">
+        <div class="moto-wheel left"></div><div class="moto-wheel right"></div>
+        <div class="moto-frame"></div><div class="moto-tank"></div><div class="moto-seat"></div><div class="moto-handle"></div>
+      </div>
+      <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
+  }
+  if (tipoVeiculo === 'CAMINHAO_TOCO' || tipoVeiculo === 'CAMINHAO_BAU') {
+    return `
+      <div class="truck-shape ${tipoVeiculo === 'CAMINHAO_BAU' ? 'with-bau' : ''}">
+        <div class="truck-cab"></div><div class="truck-body"></div>
+        <div class="truck-window"></div><div class="truck-wheel w1"></div><div class="truck-wheel w2"></div><div class="truck-wheel w3"></div>
+      </div>
+      <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
+  }
+  if (tipoVeiculo === 'ONIBUS') {
+    return `
+      <div class="bus-shape">
+        <div class="bus-body"></div><div class="bus-front"></div><div class="bus-windows"></div><div class="bus-door"></div>
+        <div class="bus-wheel w1"></div><div class="bus-wheel w2"></div>
+      </div>
+      <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
+  }
   return `
-    <article class="card">
-      <div class="card-head">
-        <div>
-          <h3>Checklist visual de entrada</h3>
-          <p class="hint">Clique no desenho para registrar a posição. O mecânico informa área, tipo, gravidade e observação do defeito.</p>
+    <div class="car-zone zone-front">Dianteira</div>
+    <div class="car-zone zone-roof">Teto/vidros</div>
+    <div class="car-zone zone-rear">Traseira</div>
+    <div class="car-body ${tipoVeiculo === 'SUV' ? 'suv' : ''} ${tipoVeiculo === 'CAMINHONETE' ? 'pickup' : ''}"></div>
+    <div class="car-window ${tipoVeiculo === 'SUV' ? 'suv' : ''}"></div>
+    ${tipoVeiculo === 'CAMINHONETE' ? '<div class="pickup-bed"></div>' : ''}
+    <div class="car-wheel w1"></div><div class="car-wheel w2"></div>
+    <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
+}
+
+function inspectionMarkersHtml(marcacoes = [], tipoVeiculo = 'AUTOMOVEL') {
+  return (marcacoes || []).filter(m => m.ativo !== false).map((m, idx) => {
+    const pos = PART_POSITIONS[m.parteKey] || [m.x || 50, m.y || 50];
+    const x = Number(m.x || pos[0]);
+    const y = Number(m.y || pos[1]);
+    return `<div class="marker ${defectSeverityClass(m.gravidade)}" title="${escapeHtml(m.area || '')} · ${escapeHtml(m.tipo || '')} - ${escapeHtml(m.obs || '')}" style="left:${x}%;top:${y}%">${idx+1}</div>`;
+  }).join('');
+}
+
+function getEntradaChecklist(os) {
+  os.checklist = os.checklist || { entrada: null, saida: null };
+  os.checklist.entrada = os.checklist.entrada || {
+    combustivel: 50,
+    estepe: true,
+    macaco: true,
+    chaveRoda: true,
+    observacoes: '',
+    marcacoes: [],
+    assinatura: '',
+    tipoVeiculo: ''
+  };
+  os.checklist.entrada.marcacoes = Array.isArray(os.checklist.entrada.marcacoes) ? os.checklist.entrada.marcacoes : [];
+  return os.checklist.entrada;
+}
+
+function getChecklistVehicleType(os) {
+  const entrada = getEntradaChecklist(os);
+  const vehicle = getVeiculo(os.veiculoId);
+  return entrada.tipoVeiculo || os.tipoVeiculo || vehicle?.tipoVeiculo || inferVehicleType(vehicle);
+}
+
+function selectedValueOptions(values, selected = '') {
+  return values.map(v => `<option value="${escapeHtml(v)}" ${String(v) === String(selected) ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+}
+
+function partInspectionValue(marcacoes, partKey) {
+  return (marcacoes || []).find(m => m.parteKey === partKey && m.ativo !== false) || null;
+}
+
+function renderPartCard(part, marcacao, index) {
+  const checked = !!marcacao;
+  const selectedPieces = marcacao?.pecasSelecionadas || [];
+  const defectOptions = DEFECT_TYPES.map(t => `<option value="${escapeHtml(t)}" ${marcacao?.tipo === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('');
+  const gravidade = marcacao?.gravidade || 'Leve';
+  const status = marcacao?.status || 'Pendente';
+  const servicos = part.servicos || [];
+  const selectedServico = marcacao?.servicoSelecionado || servicos[0] || '';
+  const pecasHtml = (part.pecas || []).map((peca, idx) => `
+    <label class="mini-check">
+      <input type="checkbox" data-field="peca" value="${escapeHtml(peca)}" ${selectedPieces.includes(peca) ? 'checked' : ''}>
+      <span>${escapeHtml(peca)}</span>
+    </label>`).join('');
+
+  return `
+    <article class="part-card ${checked ? 'checked' : ''}" data-part-key="${escapeHtml(part.key)}">
+      <div class="part-card-head">
+        <label class="part-checkline">
+          <input type="checkbox" class="part-check" ${checked ? 'checked' : ''}>
+          <span>
+            <b>${escapeHtml(part.nome)}</b>
+            <small>${escapeHtml(part.grupo || 'Análise técnica')}</small>
+          </span>
+        </label>
+        <span class="part-badge">${index + 1}</span>
+      </div>
+
+      <div class="part-analysis">
+        <div class="form-grid compact">
+          <label>Defeito encontrado
+            <select data-field="tipo">${defectOptions}</select>
+          </label>
+          <label>Gravidade
+            <select data-field="gravidade">
+              <option ${gravidade === 'Leve' ? 'selected' : ''}>Leve</option>
+              <option ${gravidade === 'Média' ? 'selected' : ''}>Média</option>
+              <option ${gravidade === 'Grave' ? 'selected' : ''}>Grave</option>
+            </select>
+          </label>
+          <label>Status
+            <select data-field="status">
+              <option ${status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+              <option ${status === 'Em análise' ? 'selected' : ''}>Em análise</option>
+              <option ${status === 'Aprovado para reparo' ? 'selected' : ''}>Aprovado para reparo</option>
+              <option ${status === 'Resolvido' ? 'selected' : ''}>Resolvido</option>
+            </select>
+          </label>
+          <label>Status do serviço
+            <select data-field="statusServico">
+              <option ${marcacao?.statusServico === 'A executar' ? 'selected' : ''}>A executar</option>
+              <option ${marcacao?.statusServico === 'Aguardando aprovação' ? 'selected' : ''}>Aguardando aprovação</option>
+              <option ${marcacao?.statusServico === 'Executando' ? 'selected' : ''}>Executando</option>
+              <option ${marcacao?.statusServico === 'Concluído' ? 'selected' : ''}>Concluído</option>
+            </select>
+          </label>
+          <label class="full">Problema / relato técnico
+            <textarea data-field="obs" placeholder="Descreva o problema encontrado nesta parte do veículo">${escapeHtml(marcacao?.obs || '')}</textarea>
+          </label>
+          <label class="full">Peças desta parte
+            <div class="piece-grid">${pecasHtml || '<span class="hint">Nenhuma peça sugerida para esta parte.</span>'}</div>
+          </label>
+          <label class="full">Serviço sugerido
+            <select data-field="servicoSelecionado">
+              ${servicos.map(s => `<option value="${escapeHtml(s)}" ${selectedServico === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+              <option value="CUSTOM" ${marcacao?.servicoSelecionado === 'CUSTOM' ? 'selected' : ''}>Outro / cadastrar novo serviço</option>
+            </select>
+          </label>
+          <label class="full">Cadastrar serviço a executar
+            <input data-field="servicoCustomizado" value="${escapeHtml(marcacao?.servicoCustomizado || '')}" placeholder="Ex.: reparar chicote, substituir suporte, alinhar peça...">
+          </label>
+          <label class="full inline-option">
+            <input type="checkbox" data-field="salvarCatalogo" ${marcacao?.salvarCatalogo ? 'checked' : ''}>
+            Salvar novo serviço no catálogo para próximas OS
+          </label>
         </div>
       </div>
-      <form id="formChecklist" class="form-grid">
+    </article>`;
+}
+
+function renderChecklistHtml(os) {
+  const entrada = getEntradaChecklist(os);
+  const vehicle = getVeiculo(os.veiculoId);
+  const tipoVeiculo = getChecklistVehicleType(os);
+  entrada.tipoVeiculo = tipoVeiculo;
+  const parts = getInspectionParts(tipoVeiculo);
+  const activeMarcacoes = entrada.marcacoes || [];
+
+  return `
+    <article class="card inspection-card">
+      <div class="card-head">
+        <div>
+          <h3>Inspeção técnica visual por tipo de veículo</h3>
+          <p class="hint">Escolha a categoria do veículo, marque as partes analisadas, detalhe o problema, selecione peças e gere serviços a executar.</p>
+        </div>
+        <div class="status-chip">${escapeHtml(VEHICLE_TYPE_LABELS[tipoVeiculo] || 'Automóvel')}</div>
+      </div>
+
+      <form id="formChecklist" class="form-grid inspection-header">
+        <label>Tipo de veículo
+          <select name="tipoVeiculo">${vehicleTypeOptions(tipoVeiculo)}</select>
+        </label>
         <label>Combustível %
           <input name="combustivel" type="number" min="0" max="100" value="${entrada.combustivel ?? 50}">
         </label>
-        <label>Área do veículo
-          <select name="areaAvaria">
-            <option value="AUTO">Detectar pelo clique</option>
-            ${areaOpts}
-          </select>
+        <label>Foto/URL geral opcional
+          <input name="fotoAvaria" value="${escapeHtml(entrada.fotoUrl || '')}" placeholder="Cole link da foto geral, se houver">
         </label>
-        <label>Tipo de defeito/avaria
-          <select name="tipoAvaria">${tipoOpts}</select>
-        </label>
-        <label>Gravidade
-          <select name="gravidadeAvaria">
-            <option>Leve</option>
-            <option>Média</option>
-            <option>Grave</option>
-          </select>
-        </label>
-        <label>Status do defeito
-          <select name="statusAvaria">
-            <option>Pendente</option>
-            <option>Em análise</option>
-            <option>Aprovado para reparo</option>
-            <option>Resolvido</option>
-          </select>
-        </label>
-        <label>Foto/URL opcional
-          <input name="fotoAvaria" placeholder="Cole link da foto, se houver">
-        </label>
-        <label class="full">Observação da próxima marcação
-          <input name="obsAvaria" placeholder="Ex.: risco profundo próximo à porta">
+        <label class="full">Observações gerais do checklist
+          <textarea name="observacoes">${escapeHtml(entrada.observacoes || '')}</textarea>
         </label>
         <label><input type="checkbox" name="estepe" ${entrada.estepe ? 'checked' : ''}> Possui estepe</label>
         <label><input type="checkbox" name="macaco" ${entrada.macaco ? 'checked' : ''}> Possui macaco</label>
         <label><input type="checkbox" name="chaveRoda" ${entrada.chaveRoda ? 'checked' : ''}> Possui chave de roda</label>
-        <label class="full">Observações gerais do checklist
-          <textarea name="observacoes">${escapeHtml(entrada.observacoes || '')}</textarea>
-        </label>
       </form>
-      <div class="vehicle-canvas-wrap">
-        <div id="vehicleDiagram" class="vehicle-diagram">
-          <div class="car-zone zone-front">Dianteira</div>
-          <div class="car-zone zone-roof">Teto/vidros</div>
-          <div class="car-zone zone-rear">Traseira</div>
-          <div class="car-body"></div>
-          <div class="car-window"></div>
-          <div class="car-wheel w1"></div>
-          <div class="car-wheel w2"></div>
-          ${(entrada.marcacoes || []).map((m, idx) => `<div class="marker ${defectSeverityClass(m.gravidade)}" title="${escapeHtml(m.area || '')} · ${escapeHtml(m.tipo)} - ${escapeHtml(m.obs || '')}" style="left:${m.x}%;top:${m.y}%">${idx+1}</div>`).join('')}
+
+      <div class="inspection-layout">
+        <div class="inspection-visual">
+          <div class="vehicle-summary">
+            <span>${escapeHtml(buildVehicleName(vehicle))}</span>
+            <b>${escapeHtml(vehicle?.placa || '-')}</b>
+          </div>
+          <div id="vehicleDiagram" class="vehicle-diagram pro ${vehicleImageClass(tipoVeiculo)}">
+            ${vehicleSilhouetteHtml(tipoVeiculo)}
+            ${inspectionMarkersHtml(activeMarcacoes, tipoVeiculo)}
+          </div>
+          <p class="hint">${escapeHtml(VEHICLE_TYPE_HINTS[tipoVeiculo] || '')}</p>
+        </div>
+
+        <div class="inspection-parts">
+          <div class="parts-toolbar">
+            <h4>Partes do veículo para análise</h4>
+            <span>${parts.length} itens técnicos</span>
+          </div>
+          <div id="partsChecklist" class="parts-checklist">
+            ${parts.map((part, idx) => renderPartCard(part, partInspectionValue(activeMarcacoes, part.key), idx)).join('')}
+          </div>
         </div>
       </div>
-      <div class="row" style="margin-top:12px">
-        <button class="btn primary" id="btnSalvarChecklist">Salvar checklist</button>
-        <button class="btn danger" id="btnLimparMarcacoes">Limpar marcações</button>
+
+      <div class="row inspection-actions">
+        <button class="btn primary" id="btnSalvarChecklist">Salvar análise técnica</button>
+        <button class="btn" id="btnGerarServicosChecklist">Gerar serviços/peças na OS</button>
+        <button class="btn danger" id="btnLimparMarcacoes">Limpar análise</button>
       </div>
       <div id="listaMarcacoes" style="margin-top:12px"></div>
     </article>`;
 }
 
-function bindChecklist(os) {
+
+function collectChecklistFromUi(os) {
   const form = $('#formChecklist');
-  const entrada = os.checklist.entrada || { combustivel: 50, estepe: true, macaco: true, chaveRoda: true, observacoes: '', marcacoes: [], assinatura: '' };
-  os.checklist.entrada = entrada;
-  renderMarcacoes(entrada);
+  const entrada = getEntradaChecklist(os);
+  const tipoVeiculo = form.tipoVeiculo.value || getChecklistVehicleType(os);
+  const existingByPart = new Map((entrada.marcacoes || []).filter(m => m.parteKey).map(m => [m.parteKey, m]));
 
-  $('#vehicleDiagram').addEventListener('click', ev => {
-    const rect = ev.currentTarget.getBoundingClientRect();
-    const x = ((ev.clientX - rect.left) / rect.width * 100).toFixed(2);
-    const y = ((ev.clientY - rect.top) / rect.height * 100).toFixed(2);
-    const tipo = form.tipoAvaria.value;
-    const area = form.areaAvaria.value === 'AUTO' ? detectAreaByPoint(x, y) : form.areaAvaria.value;
-    const gravidade = form.gravidadeAvaria.value;
-    const status = form.statusAvaria.value;
-    const obs = form.obsAvaria.value || `${tipo} em ${area}`;
-    const fotoUrl = form.fotoAvaria.value || '';
+  const marcacoes = [];
+  $$('#partsChecklist .part-card').forEach(card => {
+    const checked = $('.part-check', card)?.checked;
+    if (!checked) return;
 
-    const before = JSON.parse(JSON.stringify(os));
-    entrada.marcacoes.push({
-      id: uuid(),
-      area,
-      tipo,
-      gravidade,
-      status,
-      x: Number(x),
-      y: Number(y),
-      obs,
-      fotoUrl,
-      criadoEm: nowIso(),
-      criadoPor: currentUser?.id || ''
+    const partKey = card.dataset.partKey;
+    const part = getPartByKey(tipoVeiculo, partKey);
+    if (!part) return;
+
+    const pos = PART_POSITIONS[partKey] || [50, 50];
+    const existing = existingByPart.get(partKey) || {};
+    const pecasSelecionadas = $$('[data-field="peca"]:checked', card).map(i => i.value);
+    const servicoSelecionado = $('[data-field="servicoSelecionado"]', card)?.value || '';
+    const servicoCustomizado = $('[data-field="servicoCustomizado"]', card)?.value || '';
+
+    marcacoes.push({
+      id: existing.id || uuid(),
+      parteKey,
+      area: part.nome,
+      grupo: part.grupo || '',
+      tipo: $('[data-field="tipo"]', card)?.value || 'Outro',
+      gravidade: $('[data-field="gravidade"]', card)?.value || 'Leve',
+      status: $('[data-field="status"]', card)?.value || 'Pendente',
+      statusServico: $('[data-field="statusServico"]', card)?.value || 'A executar',
+      obs: $('[data-field="obs"]', card)?.value || '',
+      pecasSelecionadas,
+      servicoSelecionado,
+      servicoCustomizado,
+      salvarCatalogo: $('[data-field="salvarCatalogo"]', card)?.checked || false,
+      x: Number(existing.x || pos[0]),
+      y: Number(existing.y || pos[1]),
+      fotoUrl: form.fotoAvaria.value || existing.fotoUrl || '',
+      criadoEm: existing.criadoEm || nowIso(),
+      atualizadoEm: nowIso(),
+      criadoPor: existing.criadoPor || currentUser?.id || ''
     });
-    saveDb();
-    logAction('checklist_os', os.id, 'ADICIONAR_DEFEITO', before, os);
-    openOsDetails(os);
-    setTimeout(() => {
-      const btn = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
-      if (btn) btn.click();
-    }, 0);
   });
 
-  $('#listaMarcacoes').addEventListener('click', ev => {
-    const btn = ev.target.closest('[data-del-marcacao]');
-    if (!btn) return;
+  entrada.tipoVeiculo = tipoVeiculo;
+  os.tipoVeiculo = tipoVeiculo;
+  entrada.combustivel = Number(form.combustivel.value || 0);
+  entrada.estepe = Boolean(form.estepe?.checked);
+  entrada.macaco = Boolean(form.macaco?.checked);
+  entrada.chaveRoda = Boolean(form.chaveRoda?.checked);
+  entrada.fotoUrl = form.fotoAvaria.value || '';
+  entrada.observacoes = form.observacoes.value || '';
+  entrada.marcacoes = marcacoes;
+
+  return entrada;
+}
+
+function bindChecklist(os) {
+  const form = $('#formChecklist');
+  const entrada = getEntradaChecklist(os);
+  renderMarcacoes(entrada);
+
+  form.tipoVeiculo.addEventListener('change', () => {
     const before = JSON.parse(JSON.stringify(os));
-    entrada.marcacoes = entrada.marcacoes.filter(m => m.id !== btn.dataset.delMarcacao);
+    entrada.tipoVeiculo = form.tipoVeiculo.value;
+    os.tipoVeiculo = form.tipoVeiculo.value;
+    entrada.marcacoes = [];
     saveDb();
-    logAction('checklist_os', os.id, 'REMOVER_DEFEITO', before, os);
+    logAction('checklist_os', os.id, 'ALTERAR_TIPO_VEICULO_INSPECAO', before, os);
     openOsDetails(os);
     setTimeout(() => {
       const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
@@ -1204,47 +1577,146 @@ function bindChecklist(os) {
     }, 0);
   });
 
+  $('#partsChecklist').addEventListener('change', ev => {
+    const card = ev.target.closest('.part-card');
+    if (!card) return;
+    if (ev.target.classList.contains('part-check')) {
+      card.classList.toggle('checked', ev.target.checked);
+      const firstText = $('[data-field="obs"]', card);
+      if (ev.target.checked && firstText && !firstText.value) {
+        const part = getPartByKey(form.tipoVeiculo.value, card.dataset.partKey);
+        const defect = $('[data-field="tipo"]', card)?.value || 'Outro';
+        firstText.value = `${defect} em ${part?.nome || 'parte selecionada'}.`;
+      }
+    }
+  });
+
   $('#btnSalvarChecklist').addEventListener('click', ev => {
     ev.preventDefault();
     const before = JSON.parse(JSON.stringify(os));
-    entrada.combustivel = Number(form.combustivel.value || 0);
-    entrada.estepe = form.estepe.checked;
-    entrada.macaco = form.macaco.checked;
-    entrada.chaveRoda = form.chaveRoda.checked;
-    entrada.observacoes = form.observacoes.value;
+    collectChecklistFromUi(os);
     saveDb();
-    logAction('checklist_os', os.id, 'SALVAR_CHECKLIST', before, os);
-    toast('Checklist salvo.');
+    logAction('checklist_os', os.id, 'SALVAR_INSPECAO_TECNICA', before, os);
+    toast('Inspeção técnica salva.');
+    openOsDetails(os);
+    setTimeout(() => {
+      const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
+      if (tab) tab.click();
+    }, 0);
+  });
+
+  $('#btnGerarServicosChecklist').addEventListener('click', ev => {
+    ev.preventDefault();
+    const before = JSON.parse(JSON.stringify(os));
+    const entrada = collectChecklistFromUi(os);
+    let servicosCriados = 0;
+    let pecasCriadas = 0;
+
+    entrada.marcacoes.forEach(m => {
+      const custom = String(m.servicoCustomizado || '').trim();
+      const servDesc = custom || (m.servicoSelecionado && m.servicoSelecionado !== 'CUSTOM' ? m.servicoSelecionado : '');
+      if (servDesc) {
+        let catalogServico = db.servicos.find(s => s.descricao.toLowerCase() === servDesc.toLowerCase());
+        if (!catalogServico && m.salvarCatalogo) {
+          catalogServico = {
+            id: uuid(),
+            descricao: servDesc,
+            valorPadrao: 0,
+            garantiaDias: db.config.garantiaPadraoDias || 90,
+            comissaoPercentual: db.config.comissaoPadrao || 0,
+            ativo: true,
+            criadoEm: nowIso(),
+            origem: 'INSPECAO_TECNICA',
+            tipoVeiculo: entrada.tipoVeiculo,
+            parteKey: m.parteKey
+          };
+          db.servicos.push(catalogServico);
+        }
+
+        const already = (os.servicos || []).some(s => s.origemMarcacaoId === m.id && s.descricao === servDesc);
+        if (!already) {
+          os.servicos.push({
+            id: uuid(),
+            servicoId: catalogServico?.id || '',
+            mecanicoId: currentUser?.id || '',
+            descricao: servDesc,
+            quantidade: 1,
+            valorUnitario: Number(catalogServico?.valorPadrao || 0),
+            comissaoPercentual: Number(catalogServico?.comissaoPercentual || db.config.comissaoPadrao || 0),
+            origemMarcacaoId: m.id,
+            parteVeiculo: m.area,
+            defeitoEncontrado: m.tipo,
+            statusExecucao: m.statusServico || 'A executar'
+          });
+          servicosCriados++;
+        }
+      }
+
+      (m.pecasSelecionadas || []).forEach(pecaDesc => {
+        const already = (os.pecas || []).some(p => p.origemMarcacaoId === m.id && p.descricao === pecaDesc);
+        if (!already) {
+          os.pecas.push({
+            id: uuid(),
+            pecaId: '',
+            descricao: pecaDesc,
+            quantidade: 1,
+            valorUnitario: 0,
+            origemMarcacaoId: m.id,
+            parteVeiculo: m.area,
+            defeitoEncontrado: m.tipo,
+            statusCotacao: 'A cotar'
+          });
+          pecasCriadas++;
+        }
+      });
+    });
+
+    saveDb();
+    logAction('ordens_servico', os.id, 'GERAR_SERVICOS_PELA_INSPECAO', before, os);
+    toast(`${servicosCriados} serviço(s) e ${pecasCriadas} peça(s) lançados na OS.`);
+    openOsDetails(os);
+    setTimeout(() => {
+      const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'itens');
+      if (tab) tab.click();
+    }, 0);
   });
 
   $('#btnLimparMarcacoes').addEventListener('click', ev => {
     ev.preventDefault();
-    if (!confirm('Limpar marcações do checklist?')) return;
+    if (!confirm('Limpar toda a análise técnica desta OS?')) return;
     const before = JSON.parse(JSON.stringify(os));
     entrada.marcacoes = [];
     saveDb();
-    logAction('checklist_os', os.id, 'LIMPAR_MARCACOES', before, os);
+    logAction('checklist_os', os.id, 'LIMPAR_INSPECAO_TECNICA', before, os);
     openOsDetails(os);
+    setTimeout(() => {
+      const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
+      if (tab) tab.click();
+    }, 0);
   });
 }
 
 function renderMarcacoes(entrada) {
-  $('#listaMarcacoes').innerHTML = (entrada.marcacoes || []).map((m, i) => `
+  const marcacoes = (entrada.marcacoes || []).filter(m => m.ativo !== false);
+  $('#listaMarcacoes').innerHTML = marcacoes.map((m, i) => `
     <div class="defect-line">
       <div class="defect-index">${i+1}</div>
       <div>
         <b>${escapeHtml(m.area || '-')} · ${escapeHtml(m.tipo || '-')}</b>
         <p>${escapeHtml(m.obs || '')}</p>
-        <span class="hint">Posição ${m.x}% / ${m.y}%${m.fotoUrl ? ` · Foto: ${escapeHtml(m.fotoUrl)}` : ''}</span>
+        <span class="hint">
+          ${escapeHtml(m.grupo || '')}
+          ${m.pecasSelecionadas?.length ? ` · Peças: ${escapeHtml(m.pecasSelecionadas.join(', '))}` : ''}
+          ${m.servicoCustomizado || m.servicoSelecionado ? ` · Serviço: ${escapeHtml(m.servicoCustomizado || m.servicoSelecionado)}` : ''}
+        </span>
       </div>
       <div class="defect-actions">
         <span class="pill ${defectSeverityClass(m.gravidade)}">${escapeHtml(m.gravidade || 'Leve')}</span>
         <span class="pill">${escapeHtml(m.status || 'Pendente')}</span>
-        <button class="btn small danger" data-del-marcacao="${m.id}">Excluir</button>
+        <span class="pill">${escapeHtml(m.statusServico || 'A executar')}</span>
       </div>
-    </div>`).join('') || '<p class="hint">Clique no desenho do veículo para adicionar defeitos/avarias.</p>';
+    </div>`).join('') || '<p class="hint">Marque uma ou mais partes do veículo para criar a análise técnica.</p>';
 }
-
 
 function initSignaturePad(os) {
   const canvas = $('#signaturePad');
@@ -1453,12 +1925,13 @@ function renderVeiculos() {
     return !filtro || [v.placa,v.marca,v.modelo,c?.nome,v.chassi,v.renavam,v.anoModelo,v.anoFabricacao].some(x => String(x||'').toLowerCase().includes(filtro));
   }).map(v => {
     const c = getCliente(v.clienteId);
-    return `<tr><td><b>${escapeHtml(v.placa || '-')}</b></td><td>${escapeHtml(buildVehicleName(v))}</td><td>${escapeHtml(v.cor || '')}</td><td>${escapeHtml(c?.nome || '')}</td><td>${number(v.kmAtual)}</td><td>${escapeHtml(v.origemDados || 'MANUAL')}</td><td class="actions"><button class="btn small" data-edit-veiculo="${v.id}">Editar</button><button class="btn small danger" data-del-veiculo="${v.id}">Excluir</button></td></tr>`;
+    return `<tr><td><b>${escapeHtml(v.placa || '-')}</b></td><td>${escapeHtml(buildVehicleName(v))}</td><td>${escapeHtml(VEHICLE_TYPE_LABELS[v.tipoVeiculo || inferVehicleType(v)] || '-')}</td><td>${escapeHtml(v.cor || '')}</td><td>${escapeHtml(c?.nome || '')}</td><td>${number(v.kmAtual)}</td><td>${escapeHtml(v.origemDados || 'MANUAL')}</td><td class="actions"><button class="btn small" data-edit-veiculo="${v.id}">Editar</button><button class="btn small danger" data-del-veiculo="${v.id}">Excluir</button></td></tr>`;
   }).join('');
-  $('#listaVeiculos').innerHTML = `<table><thead><tr><th>Placa</th><th>Marca / modelo / ano</th><th>Cor</th><th>Cliente</th><th>KM</th><th>Origem</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table>`;
+  $('#listaVeiculos').innerHTML = `<table><thead><tr><th>Placa</th><th>Marca / modelo / ano</th><th>Tipo</th><th>Cor</th><th>Cliente</th><th>KM</th><th>Origem</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table>`;
   $$('[data-edit-veiculo]').forEach(b => b.addEventListener('click', () => openVeiculoForm(db.veiculos.find(v=>v.id===b.dataset.editVeiculo))));
   $$('[data-del-veiculo]').forEach(b => b.addEventListener('click', () => deleteEntity('veiculos', b.dataset.delVeiculo, renderVeiculos)));
 }
+
 
 function renderVehicleLookup() {
   const form = $('#formIdentificaVeiculo');
@@ -1468,10 +1941,13 @@ function renderVehicleLookup() {
   }
 
   form.dataset.bound = '1';
-  const marcas = getCatalogMarcas();
-  form.marca.innerHTML = marcas.map(m => `<option>${escapeHtml(m)}</option>`).join('');
-  updateVehicleLookupModelos(form);
+  form.tipoVeiculo.innerHTML = vehicleTypeOptions(form.tipoVeiculo.value || 'AUTOMOVEL');
+  updateVehicleLookupMarcas(form);
 
+  form.tipoVeiculo.addEventListener('change', () => {
+    updateVehicleLookupMarcas(form);
+    updateVehicleLookupPreview(form);
+  });
   form.marca.addEventListener('change', () => {
     updateVehicleLookupModelos(form);
     updateVehicleLookupPreview(form);
@@ -1487,6 +1963,7 @@ function renderVehicleLookup() {
     const item = getCatalogItem(form.modelo.value);
     openVeiculoForm(null, {
       placa: form.placa.value,
+      tipoVeiculo: form.tipoVeiculo.value,
       marca: item?.marca || form.marca.value,
       modelo: item?.modelo || '',
       anoFabricacao: Number(form.anoModelo.value || 0),
@@ -1502,9 +1979,15 @@ function renderVehicleLookup() {
   updateVehicleLookupPreview(form);
 }
 
+function updateVehicleLookupMarcas(form) {
+  const marcas = getCatalogMarcas(form.tipoVeiculo.value);
+  form.marca.innerHTML = marcas.map(m => `<option>${escapeHtml(m)}</option>`).join('');
+  updateVehicleLookupModelos(form);
+}
+
 function updateVehicleLookupModelos(form) {
-  const modelos = getCatalogModelos(form.marca.value);
-  form.modelo.innerHTML = modelos.map(m => `<option value="${m.id}">${escapeHtml(m.modelo)} · ${escapeHtml(m.carroceria || '')}</option>`).join('');
+  const modelos = getCatalogModelos(form.marca.value, form.tipoVeiculo.value);
+  form.modelo.innerHTML = modelos.map(m => `<option value="${m.id}">${escapeHtml(m.modelo)} · ${escapeHtml(m.carroceria || VEHICLE_TYPE_LABELS[inferVehicleType(m)] || '')}</option>`).join('');
   updateVehicleLookupAnos(form);
 }
 
@@ -1518,22 +2001,26 @@ function updateVehicleLookupPreview(form) {
   const item = getCatalogItem(form.modelo.value);
   const placa = String(form.placa.value || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const ano = form.anoModelo.value || '';
+  const tipo = form.tipoVeiculo?.value || inferVehicleType(item);
   const nome = item ? `${item.marca} ${item.modelo} ${ano}` : 'Selecione marca/modelo';
   $('#vehicleLookupPreview').innerHTML = `
     <div class="vehicle-preview">
       <div><span class="hint">Identificação</span><strong>${escapeHtml(nome)}</strong></div>
+      <div><span class="hint">Tipo</span><strong>${escapeHtml(VEHICLE_TYPE_LABELS[tipo] || '-')}</strong></div>
       <div><span class="hint">Placa</span><strong>${escapeHtml(placa || '-')}</strong></div>
       <div><span class="hint">Combustível base</span><strong>${escapeHtml(item?.combustiveis?.join(' / ') || '-')}</strong></div>
       <div><span class="hint">Carroceria</span><strong>${escapeHtml(item?.carroceria || '-')}</strong></div>
     </div>`;
 }
 
+
 function openVeiculoForm(v = null, prefill = null) {
   const data = { ...(prefill || {}), ...(v || {}) };
   const opts = db.clientes.map(c => `<option value="${c.id}" ${data?.clienteId===c.id?'selected':''}>${escapeHtml(c.nome)}</option>`).join('');
-  const marcas = getCatalogMarcas();
+  const selectedTipo = data.tipoVeiculo || inferVehicleType(data);
+  const marcas = getCatalogMarcas(selectedTipo);
   const selectedMarca = data.marca || marcas[0] || '';
-  const modelos = getCatalogModelos(selectedMarca);
+  const modelos = getCatalogModelos(selectedMarca, selectedTipo);
   const selectedCatalogId = data.catalogoId || modelos.find(m => m.modelo === data.modelo)?.id || modelos[0]?.id || '';
   const selectedCatalog = getCatalogItem(selectedCatalogId);
   const anos = selectedCatalog?.anos?.length ? selectedCatalog.anos : years(2000, 2026);
@@ -1541,6 +2028,9 @@ function openVeiculoForm(v = null, prefill = null) {
   openModal(v ? 'Editar veículo' : 'Novo veículo', `
     <form id="formVeiculo" class="form-grid">
       <label class="full">Cliente<select name="clienteId" required>${opts}</select></label>
+      <label>Tipo de veículo
+        <select name="tipoVeiculo">${vehicleTypeOptions(selectedTipo)}</select>
+      </label>
       <label>Placa<input name="placa" maxlength="8" value="${escapeHtml(data?.placa || '')}"></label>
       <label>Renavam<input name="renavam" value="${escapeHtml(data?.renavam || '')}"></label>
       <label class="full">Chassi<input name="chassi" value="${escapeHtml(data?.chassi || '')}"></label>
@@ -1579,11 +2069,17 @@ function openVeiculoForm(v = null, prefill = null) {
       form.marca.value = item.marca;
       form.modelo.value = item.modelo;
       if (!form.combustivel.value) form.combustivel.value = item.combustiveis?.[0] || '';
-      $('#formVeiculoPreview').innerHTML = `<b>${escapeHtml(item.marca)} ${escapeHtml(item.modelo)} ${escapeHtml(form.anoModelo.value || '')}</b> · ${escapeHtml(item.carroceria || '-')} · ${escapeHtml(item.combustiveis?.join(' / ') || '-')}`;
+      $('#formVeiculoPreview').innerHTML = `<b>${escapeHtml(item.marca)} ${escapeHtml(item.modelo)} ${escapeHtml(form.anoModelo.value || '')}</b> · ${escapeHtml(VEHICLE_TYPE_LABELS[form.tipoVeiculo.value] || '')} · ${escapeHtml(item.carroceria || '-')} · ${escapeHtml(item.combustiveis?.join(' / ') || '-')}`;
+    }
+
+    function reloadMarcas() {
+      const marcas = getCatalogMarcas(form.tipoVeiculo.value);
+      form.marcaCatalogo.innerHTML = marcas.map(m => `<option>${escapeHtml(m)}</option>`).join('');
+      reloadModelos();
     }
 
     function reloadModelos() {
-      const modelos = getCatalogModelos(form.marcaCatalogo.value);
+      const modelos = getCatalogModelos(form.marcaCatalogo.value, form.tipoVeiculo.value);
       form.catalogoId.innerHTML = modelos.map(m => `<option value="${m.id}">${escapeHtml(m.modelo)} · ${escapeHtml(m.carroceria || '')}</option>`).join('');
       reloadAnos();
       syncCatalogFields();
@@ -1596,6 +2092,7 @@ function openVeiculoForm(v = null, prefill = null) {
       form.anoModelo.innerHTML = anos.map(a => `<option ${String(current || data?.anoModelo || data?.anoFabricacao || anos[0]) === String(a) ? 'selected' : ''}>${a}</option>`).join('');
     }
 
+    form.tipoVeiculo.addEventListener('change', reloadMarcas);
     form.marcaCatalogo.addEventListener('change', reloadModelos);
     form.catalogoId.addEventListener('change', () => { reloadAnos(); syncCatalogFields(); });
     form.anoModelo.addEventListener('change', syncCatalogFields);
@@ -1607,6 +2104,7 @@ function openVeiculoForm(v = null, prefill = null) {
       const cat = getCatalogItem(fd.get('catalogoId'));
       const obj = {
         clienteId: fd.get('clienteId'),
+        tipoVeiculo: fd.get('tipoVeiculo') || inferVehicleType(cat),
         placa: String(fd.get('placa') || '').toUpperCase().replace(/[^A-Z0-9]/g,''),
         renavam: onlyDigits(fd.get('renavam')),
         chassi: String(fd.get('chassi') || '').toUpperCase(),
@@ -1818,4 +2316,32 @@ function registerServiceWorker() {
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+}
+
+function bindInstallPrompt() {
+  const btn = $('#btnInstallApp');
+  if (!btn) return;
+
+  window.addEventListener('beforeinstallprompt', ev => {
+    ev.preventDefault();
+    deferredInstallPrompt = ev;
+    btn.classList.remove('hidden');
+  });
+
+  btn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) {
+      toast('No iOS, use Compartilhar > Adicionar à Tela de Início.');
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(() => null);
+    deferredInstallPrompt = null;
+    btn.classList.add('hidden');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    btn.classList.add('hidden');
+    toast('Aplicativo instalado com sucesso.');
+  });
 }

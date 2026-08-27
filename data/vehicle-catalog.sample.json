@@ -1,58 +1,120 @@
 [
   {
-    "id": "toyota-corolla",
-    "marca": "Toyota",
-    "modelo": "Corolla",
-    "carroceria": "Sedã",
-    "anos": "1998-2026",
+    "id": "honda-cg160",
+    "marca": "Honda",
+    "modelo": "CG 160",
+    "carroceria": "Moto",
+    "tipoVeiculo": "MOTO",
+    "anos": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022
+    ],
     "combustiveis": [
       "Flex",
-      "Híbrido",
       "Gasolina"
     ]
   },
   {
-    "id": "honda-civic",
-    "marca": "Honda",
-    "modelo": "Civic",
-    "carroceria": "Sedã",
-    "anos": "1995-2026",
+    "id": "vw-gol",
+    "marca": "Volkswagen",
+    "modelo": "Gol",
+    "carroceria": "Hatch",
+    "tipoVeiculo": "AUTOMOVEL",
+    "anos": [
+      2023,
+      2022,
+      2021,
+      2020
+    ],
     "combustiveis": [
       "Flex",
-      "Gasolina",
+      "Gasolina"
+    ]
+  },
+  {
+    "id": "jeep-compass",
+    "marca": "Jeep",
+    "modelo": "Compass",
+    "carroceria": "SUV",
+    "tipoVeiculo": "SUV",
+    "anos": [
+      2026,
+      2025,
+      2024,
+      2023
+    ],
+    "combustiveis": [
+      "Flex",
+      "Diesel",
       "Híbrido"
     ]
   },
   {
-    "id": "chevrolet-onix",
-    "marca": "Chevrolet",
-    "modelo": "Onix",
-    "carroceria": "Hatch",
-    "anos": "2013-2026",
+    "id": "toyota-hilux",
+    "marca": "Toyota",
+    "modelo": "Hilux",
+    "carroceria": "Picape",
+    "tipoVeiculo": "CAMINHONETE",
+    "anos": [
+      2026,
+      2025,
+      2024,
+      2023
+    ],
     "combustiveis": [
+      "Diesel",
       "Flex"
     ]
   },
   {
-    "id": "fiat-strada",
-    "marca": "Fiat",
-    "modelo": "Strada",
-    "carroceria": "Picape",
-    "anos": "1998-2026",
+    "id": "mercedes-accelo815",
+    "marca": "Mercedes-Benz",
+    "modelo": "Accelo 815",
+    "carroceria": "Caminhão toco",
+    "tipoVeiculo": "CAMINHAO_TOCO",
+    "anos": [
+      2026,
+      2025,
+      2024,
+      2023
+    ],
     "combustiveis": [
-      "Flex",
       "Diesel"
     ]
   },
   {
-    "id": "volkswagen-gol",
-    "marca": "Volkswagen",
-    "modelo": "Gol",
-    "carroceria": "Hatch",
-    "anos": "1995-2023",
+    "id": "iveco-daily-bau",
+    "marca": "Iveco",
+    "modelo": "Daily Baú",
+    "carroceria": "Caminhão baú",
+    "tipoVeiculo": "CAMINHAO_BAU",
+    "anos": [
+      2026,
+      2025,
+      2024,
+      2023
+    ],
     "combustiveis": [
-      "Flex",
-      "Gasolina"
+      "Diesel"
+    ]
+  },
+  {
+    "id": "marcopolo-volare",
+    "marca": "Marcopolo",
+    "modelo": "Volare",
+    "carroceria": "Ônibus",
+    "tipoVeiculo": "ONIBUS",
+    "anos": [
+      2026,
+      2025,
+      2024,
+      2023
+    ],
+    "combustiveis": [
+      "Diesel"
     ]
   }
 ]
