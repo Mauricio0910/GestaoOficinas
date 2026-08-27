@@ -257,3 +257,68 @@ tr:hover td{background:#fbfdff}
   .moto-wheel{width:54px;height:54px;bottom:40px}.moto-wheel.left{left:75px}.moto-wheel.right{right:75px}
   .truck-cab{left:40px;width:105px}.truck-body{left:145px;width:260px}.bus-body{left:38px;width:380px}
 }
+
+
+/* Atualização: diagramas técnicos com fundo branco e persistência visual clara da inspeção */
+.vehicle-diagram.pro{
+  background:#ffffff!important;
+  border:1px solid #dbeafe!important;
+  box-shadow:0 18px 35px rgba(15,61,94,.10), inset 0 0 0 1px #eef6ff!important;
+  min-height:360px;
+  height:clamp(330px, 42vw, 430px);
+  cursor:default;
+  overflow:hidden;
+}
+.vehicle-blueprint-svg{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff}
+.vehicle-blueprint-svg .bp-fill{fill:rgba(224,242,254,.18)}
+.vehicle-blueprint-svg .bp-fine{stroke-width:1.6;opacity:.62}
+.vehicle-diagram.pro .marker{
+  z-index:5;
+  width:28px;height:28px;margin-left:-14px;margin-top:-14px;
+  background:#f59e0b;border:3px solid #fff;color:#fff;
+  box-shadow:0 8px 18px rgba(15,23,42,.22),0 0 0 5px rgba(245,158,11,.15);
+}
+.vehicle-diagram.pro .marker.grave{background:#dc2626;box-shadow:0 8px 18px rgba(15,23,42,.22),0 0 0 5px rgba(220,38,38,.14)}
+.vehicle-diagram.pro .marker.media{background:#f59e0b;box-shadow:0 8px 18px rgba(15,23,42,.22),0 0 0 5px rgba(245,158,11,.15)}
+.vehicle-diagram.pro .marker.leve{background:#16a34a;box-shadow:0 8px 18px rgba(15,23,42,.22),0 0 0 5px rgba(22,163,74,.14)}
+.pill.grave{background:#fee2e2;color:#991b1b}
+.pill.media{background:#fef3c7;color:#92400e}
+.pill.leve{background:#dcfce7;color:#166534}
+.inspection-visual{background:#ffffff}
+.inspection-save-hint{
+  display:flex;align-items:center;gap:8px;
+  margin-top:10px;padding:10px 12px;border-radius:14px;
+  background:#eef9ff;color:#075985;font-size:13px;font-weight:700
+}
+@media (max-width: 920px){
+  .vehicle-diagram.pro{height:340px}
+}
+@media (max-width: 560px){
+  .vehicle-diagram.pro{height:300px}
+  .vehicle-blueprint-svg text{font-size:18px}
+}
+
+
+/* Licenciamento */
+.license-box { margin: 12px 0 16px; }
+.license-status {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+.license-status strong { font-size: 1.02rem; }
+.license-status.success {
+  border-color: rgba(22, 163, 74, .35);
+  background: rgba(22, 163, 74, .08);
+}
+.license-status.warning {
+  border-color: rgba(245, 158, 11, .35);
+  background: rgba(245, 158, 11, .10);
+}
+.license-status.danger {
+  border-color: rgba(220, 38, 38, .35);
+  background: rgba(220, 38, 38, .08);
+}

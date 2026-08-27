@@ -294,6 +294,33 @@
             </form>
           </article>
           <article class="card">
+            <div class="card-head">
+              <h3>Licenciamento do produto</h3>
+              <span class="badge">Produto adicional</span>
+            </div>
+            <p class="hint">Configure a chave de licença para ativação comercial do módulo GestãoOficinas Pro. A validação pode ser feita pela API de integração/licenciamento.</p>
+            <div id="licencaStatusBox" class="license-box"></div>
+            <form id="formLicenca" class="form-grid">
+              <label>Chave da licença
+                <input name="licencaChave" placeholder="GO-PRO-XXXX-XXXX-XXXX">
+              </label>
+              <label>URL da API de licenciamento
+                <input name="licencaApiUrl" placeholder="https://api.suaempresa.com.br">
+              </label>
+              <label>Tenant / Oficina
+                <input name="licencaTenant" placeholder="oficina_demo">
+              </label>
+              <label>ID do dispositivo
+                <input name="licencaDeviceId" placeholder="Gerado automaticamente">
+              </label>
+              <div class="full row">
+                <button class="btn primary" type="submit">Salvar licenciamento</button>
+                <button class="btn" type="button" id="btnValidarLicenca">Validar licença agora</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="card">
             <h3>Banco de dados e backup</h3>
             <p id="storageStatus" class="hint">Carregando modo de persistência...</p>
             <p class="hint">Com o Firebase configurado, os dados são gravados no Cloud Firestore. Sem configuração, o sistema usa LocalStorage apenas para teste local.</p>

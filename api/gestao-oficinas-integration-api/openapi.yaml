@@ -1,0 +1,118 @@
+openapi: 3.0.3
+info:
+  title: GestãoOficinas Pro - API de Integração e Licenciamento
+  version: 1.0.0
+  description: API REST para integração com ERP Delphi/SQL Server 2019 e validação de licenças comerciais.
+servers:
+  - url: https://api.suaempresa.com.br
+paths:
+  /health:
+    get:
+      summary: Verifica saúde da API
+      responses:
+        '200':
+          description: OK
+  /api/v1/licenciamento/validar:
+    post:
+      summary: Valida uma licença do produto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chave, tenant, deviceId]
+              properties:
+                produto:
+                  type: string
+                  example: GESTAO_OFICINAS_PRO
+                chave:
+                  type: string
+                tenant:
+                  type: string
+                  example: oficina_demo
+                deviceId:
+                  type: string
+                cnpj:
+                  type: string
+                origem:
+                  type: string
+                  example: PWA
+      responses:
+        '200':
+          description: Licença válida
+        '403':
+          description: Licença inválida, expirada ou bloqueada
+  /api/v1/licenciamento/status:
+    get:
+      summary: Consulta status das licenças
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: tenant
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de licenças
+  /api/v1/ordens-servico:
+    get:
+      summary: Lista ordens de serviço para integração Delphi
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: tenant
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: desde
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Lista de OS
+  /api/v1/ordens-servico/{id}:
+    get:
+      summary: Retorna OS completa com serviços, peças e inspeção
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OS completa
+        '404':
+          description: OS não encontrada
+  /api/v1/clientes/upsert:
+    post:
+      summary: Cria ou atualiza cliente no SQL Server de integração
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Cliente sincronizado
+  /api/v1/sync/eventos:
+    post:
+      summary: Registra evento de sincronização
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Evento registrado
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key

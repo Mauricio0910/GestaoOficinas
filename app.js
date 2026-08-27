@@ -350,6 +350,9 @@ function vehicleCatalog() {
 function normalizeDb(database) {
   const d = database || demoDb();
   d.config = d.config || {};
+  d.config.licencaStatus = d.config.licencaStatus || 'DEMO';
+  d.config.licencaTenant = d.config.licencaTenant || 'oficina_demo';
+  d.config.licencaDeviceId = d.config.licencaDeviceId || getDeviceId();
   d.users = Array.isArray(d.users) ? d.users : [];
   d.clientes = Array.isArray(d.clientes) ? d.clientes : [];
   d.veiculos = Array.isArray(d.veiculos) ? d.veiculos : [];
@@ -466,7 +469,14 @@ function demoDb() {
       email: 'contato@oficina.com',
       endereco: 'Rua Exemplo, 100 - Centro',
       garantiaPadraoDias: 90,
-      comissaoPadrao: 10
+      comissaoPadrao: 10,
+      licencaChave: '',
+      licencaStatus: 'DEMO',
+      licencaApiUrl: '',
+      licencaTenant: 'oficina_demo',
+      licencaValidaAte: '',
+      licencaUltimaValidacao: '',
+      licencaDeviceId: ''
     },
     session: null,
     catalogoVeiculos: mergeCatalogs(vehicleCatalog()),
@@ -583,19 +593,53 @@ async function loadDb() {
 }
 
 function saveDb() {
-  if (!db) return;
+  if (!db) return Promise.resolve(false);
 
   if (firebaseStore.enabled) {
     const snapshot = JSON.parse(JSON.stringify({ ...db, session: null }));
     localStorage.setItem(`${STORAGE_KEY}_cache`, JSON.stringify(snapshot));
-    firebaseStore.save(snapshot).catch(err => {
+    return firebaseStore.save(snapshot).catch(err => {
       console.error(err);
       toast('Não foi possível salvar no Firebase. Alterações mantidas no cache local.');
+      return false;
     });
-    return;
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  return Promise.resolve(true);
+}
+
+async function persistDb() {
+  return await saveDb();
+}
+
+function syncInspectionToOs(os, entrada) {
+  const marcacoes = Array.isArray(entrada?.marcacoes) ? entrada.marcacoes : [];
+  const atualizadoEm = nowIso();
+
+  os.tipoVeiculo = entrada?.tipoVeiculo || os.tipoVeiculo || '';
+  os.checklist = os.checklist || { entrada: null, saida: null };
+  os.checklist.entrada = entrada;
+  os.checklist.entrada.atualizadoEm = atualizadoEm;
+  os.checklist.entrada.atualizadoPor = currentUser?.id || '';
+
+  // Espelho direto no documento da OS para facilitar consulta no Firestore,
+  // relatórios e conferência rápida sem precisar abrir checklist.entrada.
+  os.inspecaoTecnica = {
+    tipoVeiculo: os.checklist.entrada.tipoVeiculo || os.tipoVeiculo || '',
+    combustivel: Number(os.checklist.entrada.combustivel || 0),
+    observacoes: os.checklist.entrada.observacoes || '',
+    fotoUrl: os.checklist.entrada.fotoUrl || '',
+    partes: marcacoes,
+    totalPartes: marcacoes.length,
+    pendencias: marcacoes.filter(m => String(m.status || '').toLowerCase() !== 'resolvido').length,
+    servicosAExecutar: marcacoes.filter(m => String(m.statusServico || '').toLowerCase() !== 'concluído').length,
+    atualizadoEm,
+    atualizadoPor: currentUser?.id || '',
+    atualizadoPorNome: currentUser?.nome || ''
+  };
+
+  return os.inspecaoTecnica;
 }
 
 function updateStorageStatus() {
@@ -752,6 +796,7 @@ function bindConfig() {
     const fd = new FormData(ev.target);
     const before = { ...db.config };
     db.config = {
+      ...db.config,
       nomeFantasia: fd.get('nomeFantasia'),
       cnpj: fd.get('cnpj'),
       telefone: fd.get('telefone'),
@@ -765,6 +810,29 @@ function bindConfig() {
     $('#empresaNome').textContent = db.config.nomeFantasia;
     toast('Configurações salvas.');
   });
+
+  const formLicenca = $('#formLicenca');
+  if (formLicenca) {
+    formLicenca.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const fd = new FormData(ev.target);
+      const before = { ...db.config };
+      db.config = {
+        ...db.config,
+        licencaChave: String(fd.get('licencaChave') || '').trim(),
+        licencaApiUrl: String(fd.get('licencaApiUrl') || '').trim().replace(/\/$/, ''),
+        licencaTenant: String(fd.get('licencaTenant') || 'oficina_demo').trim(),
+        licencaDeviceId: String(fd.get('licencaDeviceId') || getDeviceId()).trim()
+      };
+      await saveDb();
+      logAction('licenciamento', null, 'SALVAR_CONFIG_LICENCA', before, db.config);
+      renderLicencaStatus();
+      toast('Configuração de licenciamento salva.');
+    });
+
+    const btnValidar = $('#btnValidarLicenca');
+    if (btnValidar) btnValidar.addEventListener('click', validarLicencaProduto);
+  }
 
   $('#btnExportBackup').addEventListener('click', () => {
     downloadText(`backup-oficinapro-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(db, null, 2), 'application/json');
@@ -1276,41 +1344,177 @@ function vehicleImageClass(tipoVeiculo) {
   return `vehicle-${String(tipoVeiculo || 'AUTOMOVEL').toLowerCase().replaceAll('_','-')}`;
 }
 
+function blueprintDefs() {
+  return `
+    <defs>
+      <linearGradient id="bpStroke" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7dd3fc"/>
+        <stop offset=".5" stop-color="#0ea5e9"/>
+        <stop offset="1" stop-color="#0369a1"/>
+      </linearGradient>
+      <filter id="bpGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="1.35" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <pattern id="bpGrid" width="22" height="22" patternUnits="userSpaceOnUse">
+        <path d="M22 0H0V22" fill="none" stroke="#e8f4fc" stroke-width="1"/>
+      </pattern>
+    </defs>`;
+}
+
+function vehicleBlueprintBody(tipoVeiculo) {
+  const auto = `
+    <g class="bp-vehicle bp-auto">
+      <path class="bp-fill" d="M77 242 C94 185 151 142 237 121 C310 103 401 96 500 114 C590 130 654 170 704 232 C728 261 724 307 697 325 C626 367 447 384 283 374 C170 367 99 342 73 306 C62 289 65 260 77 242Z"/>
+      <path d="M104 246 C149 199 230 165 343 152 C458 139 564 160 652 234"/>
+      <path d="M179 214 L272 158 L470 156 L614 230"/>
+      <path d="M272 158 L306 238 L511 244 L470 156"/>
+      <path d="M306 238 C358 222 444 224 511 244"/>
+      <path d="M128 293 C220 318 468 331 664 286"/>
+      <path d="M168 246 L108 273 L133 299"/>
+      <path d="M650 236 L707 259 L681 296"/>
+      <circle cx="203" cy="335" r="43"/>
+      <circle cx="203" cy="335" r="27"/>
+      <circle cx="581" cy="334" r="45"/>
+      <circle cx="581" cy="334" r="28"/>
+      <path d="M246 332 L535 333"/>
+      <path class="bp-fine" d="M124 263 L662 263 M143 246 L640 283 M206 197 L582 255 M342 153 L385 321 M448 159 L420 327 M225 241 L205 318 M584 246 L584 318"/>
+      <path class="bp-fine" d="M110 303 C228 355 553 361 697 309"/>
+    </g>`;
+
+  const suv = `
+    <g class="bp-vehicle bp-suv">
+      <path class="bp-fill" d="M75 251 C95 188 163 142 266 118 C348 99 486 103 573 132 C642 155 697 210 720 275 C731 306 712 334 679 347 C568 391 281 390 134 345 C79 328 60 296 75 251Z"/>
+      <path d="M106 255 C160 197 248 160 364 149 C484 139 606 172 685 256"/>
+      <path d="M196 222 L281 146 L502 150 L641 246"/>
+      <path d="M281 146 L315 241 L524 244 L502 150"/>
+      <path d="M319 247 L317 336 M520 247 L520 337"/>
+      <path d="M136 292 C260 319 484 329 669 293"/>
+      <circle cx="199" cy="344" r="48"/>
+      <circle cx="199" cy="344" r="29"/>
+      <circle cx="593" cy="344" r="49"/>
+      <circle cx="593" cy="344" r="30"/>
+      <path class="bp-fine" d="M109 278 L694 278 M169 232 L659 300 M246 174 L596 246 M371 151 L386 344 M478 152 L457 343 M141 326 C306 375 542 379 684 324"/>
+      <path class="bp-fine" d="M637 247 L702 270 L677 313 M118 274 L170 242"/>
+    </g>`;
+
+  const pickup = `
+    <g class="bp-vehicle bp-pickup">
+      <path class="bp-fill" d="M79 263 C109 198 186 152 297 132 C365 120 443 124 500 145 L696 161 C731 164 751 190 744 224 L723 315 C716 345 681 363 614 370 C421 390 219 374 117 336 C77 321 61 295 79 263Z"/>
+      <path d="M108 260 C170 201 264 163 382 160 C435 160 475 169 500 188"/>
+      <path d="M210 226 L295 154 L452 158 L514 221"/>
+      <path d="M295 154 L329 239 L486 238 L452 158"/>
+      <path d="M515 222 L706 205 L716 283 L514 285Z"/>
+      <path d="M514 222 L514 340"/>
+      <path d="M126 296 C277 327 535 329 705 299"/>
+      <circle cx="203" cy="344" r="47"/>
+      <circle cx="203" cy="344" r="29"/>
+      <circle cx="610" cy="343" r="49"/>
+      <circle cx="610" cy="343" r="30"/>
+      <path class="bp-fine" d="M130 281 L719 281 M174 238 L706 304 M329 159 L354 340 M454 158 L430 337 M552 220 L684 284 M572 211 L663 211 M148 327 C323 377 558 380 711 321"/>
+    </g>`;
+
+  const moto = `
+    <g class="bp-vehicle bp-moto">
+      <circle cx="210" cy="312" r="72"/>
+      <circle cx="210" cy="312" r="45"/>
+      <circle cx="592" cy="312" r="72"/>
+      <circle cx="592" cy="312" r="45"/>
+      <path class="bp-fill" d="M230 292 L338 218 L466 227 L583 297 L520 309 L426 272 L333 307Z"/>
+      <path d="M256 303 L360 190 L453 302 L336 302 L506 198 L597 304"/>
+      <path d="M328 216 C375 183 429 182 489 214"/>
+      <path d="M407 188 L488 166 L554 171"/>
+      <path d="M506 198 L566 130 L640 127"/>
+      <path d="M353 190 L330 139 L392 138"/>
+      <path d="M447 304 C473 252 509 217 552 193"/>
+      <path d="M256 303 C291 285 317 257 338 218"/>
+      <path class="bp-fine" d="M210 240 L210 384 M138 312 H282 M592 240 L592 384 M520 312 H664 M312 223 L512 303 M353 303 L464 226 M474 225 L553 303"/>
+      <path class="bp-fine" d="M338 218 C351 248 382 268 426 272 M447 236 C481 253 512 277 540 304"/>
+    </g>`;
+
+  const toco = `
+    <g class="bp-vehicle bp-truck">
+      <path class="bp-fill" d="M77 224 L299 171 L666 170 C704 170 733 199 733 237 L733 318 C733 347 710 369 681 369 L154 369 C101 369 68 342 76 293Z"/>
+      <path d="M299 171 L299 356"/>
+      <path d="M112 231 L242 199 L271 253 L238 309 L103 318Z"/>
+      <path d="M322 203 L672 204 L706 237 L706 312 L322 318Z"/>
+      <path d="M114 318 L707 318"/>
+      <circle cx="201" cy="363" r="46"/>
+      <circle cx="201" cy="363" r="27"/>
+      <circle cx="552" cy="363" r="46"/>
+      <circle cx="552" cy="363" r="27"/>
+      <circle cx="654" cy="363" r="46"/>
+      <circle cx="654" cy="363" r="27"/>
+      <path class="bp-fine" d="M87 274 H718 M115 230 L289 317 M242 199 L299 317 M322 203 L706 312 M402 204 V318 M484 204 V318 M566 204 V318 M648 204 V318"/>
+      <path class="bp-fine" d="M105 338 C233 382 563 390 716 343"/>
+    </g>`;
+
+  const bau = `
+    <g class="bp-vehicle bp-bau">
+      <path class="bp-fill" d="M73 228 L261 177 L696 171 C731 171 755 196 755 231 L755 321 C755 352 731 374 699 374 L147 374 C95 374 63 344 74 296Z"/>
+      <path d="M262 177 L262 357"/>
+      <path d="M111 232 L220 204 L247 254 L222 310 L101 318Z"/>
+      <path d="M288 191 L721 190 L730 318 L288 323Z"/>
+      <path d="M322 219 L682 219 L694 300 L322 305Z"/>
+      <path d="M104 319 L735 319"/>
+      <circle cx="191" cy="368" r="46"/>
+      <circle cx="191" cy="368" r="27"/>
+      <circle cx="562" cy="368" r="46"/>
+      <circle cx="562" cy="368" r="27"/>
+      <circle cx="665" cy="368" r="46"/>
+      <circle cx="665" cy="368" r="27"/>
+      <path class="bp-fine" d="M82 276 H740 M112 232 L263 318 M220 204 L288 323 M288 191 L730 318 M386 191 V322 M488 191 V322 M590 191 V322 M692 191 V322"/>
+    </g>`;
+
+  const bus = `
+    <g class="bp-vehicle bp-bus">
+      <path class="bp-fill" d="M67 224 C76 190 112 169 170 168 L664 168 C711 168 742 199 742 244 L742 316 C742 351 713 374 674 374 L141 374 C96 374 66 347 66 307Z"/>
+      <path d="M104 210 L672 207 C702 207 719 226 720 253 L720 316 L94 318 L94 240 C94 222 101 213 104 210Z"/>
+      <path d="M129 223 H653"/>
+      <path d="M142 244 H645"/>
+      <path d="M167 219 V318 M231 219 V318 M295 219 V318 M359 219 V318 M423 219 V318 M487 219 V318 M551 219 V318 M615 219 V318"/>
+      <path d="M630 246 H704 V318 H630Z"/>
+      <circle cx="201" cy="368" r="44"/>
+      <circle cx="201" cy="368" r="27"/>
+      <circle cx="614" cy="368" r="44"/>
+      <circle cx="614" cy="368" r="27"/>
+      <path class="bp-fine" d="M78 282 H732 M101 209 L721 318 M160 169 L137 318 M664 168 L704 318 M101 340 C251 384 535 388 724 339"/>
+      <path class="bp-fine" d="M126 194 C254 181 528 182 688 196"/>
+    </g>`;
+
+  const map = {
+    MOTO: moto,
+    AUTOMOVEL: auto,
+    SUV: suv,
+    CAMINHONETE: pickup,
+    CAMINHAO_TOCO: toco,
+    CAMINHAO_BAU: bau,
+    ONIBUS: bus
+  };
+
+  return map[tipoVeiculo] || auto;
+}
+
 function vehicleSilhouetteHtml(tipoVeiculo) {
   const label = VEHICLE_TYPE_LABELS[tipoVeiculo] || 'Automóvel';
-  if (tipoVeiculo === 'MOTO') {
-    return `
-      <div class="moto-shape">
-        <div class="moto-wheel left"></div><div class="moto-wheel right"></div>
-        <div class="moto-frame"></div><div class="moto-tank"></div><div class="moto-seat"></div><div class="moto-handle"></div>
-      </div>
-      <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
-  }
-  if (tipoVeiculo === 'CAMINHAO_TOCO' || tipoVeiculo === 'CAMINHAO_BAU') {
-    return `
-      <div class="truck-shape ${tipoVeiculo === 'CAMINHAO_BAU' ? 'with-bau' : ''}">
-        <div class="truck-cab"></div><div class="truck-body"></div>
-        <div class="truck-window"></div><div class="truck-wheel w1"></div><div class="truck-wheel w2"></div><div class="truck-wheel w3"></div>
-      </div>
-      <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
-  }
-  if (tipoVeiculo === 'ONIBUS') {
-    return `
-      <div class="bus-shape">
-        <div class="bus-body"></div><div class="bus-front"></div><div class="bus-windows"></div><div class="bus-door"></div>
-        <div class="bus-wheel w1"></div><div class="bus-wheel w2"></div>
-      </div>
-      <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
-  }
   return `
-    <div class="car-zone zone-front">Dianteira</div>
-    <div class="car-zone zone-roof">Teto/vidros</div>
-    <div class="car-zone zone-rear">Traseira</div>
-    <div class="car-body ${tipoVeiculo === 'SUV' ? 'suv' : ''} ${tipoVeiculo === 'CAMINHONETE' ? 'pickup' : ''}"></div>
-    <div class="car-window ${tipoVeiculo === 'SUV' ? 'suv' : ''}"></div>
-    ${tipoVeiculo === 'CAMINHONETE' ? '<div class="pickup-bed"></div>' : ''}
-    <div class="car-wheel w1"></div><div class="car-wheel w2"></div>
-    <span class="vehicle-kind-label">${escapeHtml(label)}</span>`;
+    <svg class="vehicle-blueprint-svg" viewBox="0 0 820 460" role="img" aria-label="${escapeHtml(label)} em desenho técnico">
+      ${blueprintDefs()}
+      <rect x="0" y="0" width="820" height="460" rx="26" fill="#ffffff"/>
+      <rect x="18" y="18" width="784" height="424" rx="22" fill="url(#bpGrid)" opacity=".85"/>
+      <g fill="none" stroke="url(#bpStroke)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#bpGlow)">
+        ${vehicleBlueprintBody(tipoVeiculo)}
+      </g>
+      <g fill="none" stroke="#38bdf8" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" opacity=".55">
+        ${vehicleBlueprintBody(tipoVeiculo)}
+      </g>
+      <text x="38" y="56" fill="#075985" font-size="22" font-weight="800">${escapeHtml(label)}</text>
+      <text x="38" y="82" fill="#64748b" font-size="13" font-weight="600">Desenho técnico para checklist visual · fundo branco</text>
+      <path d="M37 94 H315" stroke="#bae6fd" stroke-width="3" stroke-linecap="round"/>
+    </svg>`;
 }
 
 function inspectionMarkersHtml(marcacoes = [], tipoVeiculo = 'AUTOMOVEL') {
@@ -1478,6 +1682,9 @@ function renderChecklistHtml(os) {
             ${inspectionMarkersHtml(activeMarcacoes, tipoVeiculo)}
           </div>
           <p class="hint">${escapeHtml(VEHICLE_TYPE_HINTS[tipoVeiculo] || '')}</p>
+          <div class="inspection-save-hint">
+            ${os.inspecaoTecnica?.atualizadoEm ? `Última inspeção salva: ${escapeHtml(formatDate(os.inspecaoTecnica.atualizadoEm))} · ${Number(os.inspecaoTecnica.totalPartes || 0)} parte(s)` : 'A análise será gravada na OS ao clicar em Salvar análise técnica.'}
+          </div>
         </div>
 
         <div class="inspection-parts">
@@ -1492,9 +1699,9 @@ function renderChecklistHtml(os) {
       </div>
 
       <div class="row inspection-actions">
-        <button class="btn primary" id="btnSalvarChecklist">Salvar análise técnica</button>
-        <button class="btn" id="btnGerarServicosChecklist">Gerar serviços/peças na OS</button>
-        <button class="btn danger" id="btnLimparMarcacoes">Limpar análise</button>
+        <button class="btn primary" type="button" id="btnSalvarChecklist">Salvar análise técnica</button>
+        <button class="btn" type="button" id="btnGerarServicosChecklist">Gerar serviços/peças na OS</button>
+        <button class="btn danger" type="button" id="btnLimparMarcacoes">Limpar análise</button>
       </div>
       <div id="listaMarcacoes" style="margin-top:12px"></div>
     </article>`;
@@ -1555,6 +1762,7 @@ function collectChecklistFromUi(os) {
   entrada.observacoes = form.observacoes.value || '';
   entrada.marcacoes = marcacoes;
 
+  syncInspectionToOs(os, entrada);
   return entrada;
 }
 
@@ -1563,13 +1771,14 @@ function bindChecklist(os) {
   const entrada = getEntradaChecklist(os);
   renderMarcacoes(entrada);
 
-  form.tipoVeiculo.addEventListener('change', () => {
+  form.tipoVeiculo.addEventListener('change', async () => {
     const before = JSON.parse(JSON.stringify(os));
     entrada.tipoVeiculo = form.tipoVeiculo.value;
     os.tipoVeiculo = form.tipoVeiculo.value;
     entrada.marcacoes = [];
-    saveDb();
+    syncInspectionToOs(os, entrada);
     logAction('checklist_os', os.id, 'ALTERAR_TIPO_VEICULO_INSPECAO', before, os);
+    await persistDb();
     openOsDetails(os);
     setTimeout(() => {
       const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
@@ -1591,13 +1800,15 @@ function bindChecklist(os) {
     }
   });
 
-  $('#btnSalvarChecklist').addEventListener('click', ev => {
+  $('#btnSalvarChecklist').addEventListener('click', async ev => {
     ev.preventDefault();
+    const btn = ev.currentTarget;
+    btn.disabled = true;
     const before = JSON.parse(JSON.stringify(os));
     collectChecklistFromUi(os);
-    saveDb();
     logAction('checklist_os', os.id, 'SALVAR_INSPECAO_TECNICA', before, os);
-    toast('Inspeção técnica salva.');
+    await persistDb();
+    toast(`Inspeção técnica salva com ${os.inspecaoTecnica?.totalPartes || 0} parte(s) analisada(s).`);
     openOsDetails(os);
     setTimeout(() => {
       const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
@@ -1605,8 +1816,10 @@ function bindChecklist(os) {
     }, 0);
   });
 
-  $('#btnGerarServicosChecklist').addEventListener('click', ev => {
+  $('#btnGerarServicosChecklist').addEventListener('click', async ev => {
     ev.preventDefault();
+    const btn = ev.currentTarget;
+    btn.disabled = true;
     const before = JSON.parse(JSON.stringify(os));
     const entrada = collectChecklistFromUi(os);
     let servicosCriados = 0;
@@ -1671,8 +1884,8 @@ function bindChecklist(os) {
       });
     });
 
-    saveDb();
     logAction('ordens_servico', os.id, 'GERAR_SERVICOS_PELA_INSPECAO', before, os);
+    await persistDb();
     toast(`${servicosCriados} serviço(s) e ${pecasCriadas} peça(s) lançados na OS.`);
     openOsDetails(os);
     setTimeout(() => {
@@ -1681,13 +1894,14 @@ function bindChecklist(os) {
     }, 0);
   });
 
-  $('#btnLimparMarcacoes').addEventListener('click', ev => {
+  $('#btnLimparMarcacoes').addEventListener('click', async ev => {
     ev.preventDefault();
     if (!confirm('Limpar toda a análise técnica desta OS?')) return;
     const before = JSON.parse(JSON.stringify(os));
     entrada.marcacoes = [];
-    saveDb();
+    syncInspectionToOs(os, entrada);
     logAction('checklist_os', os.id, 'LIMPAR_INSPECAO_TECNICA', before, os);
+    await persistDb();
     openOsDetails(os);
     setTimeout(() => {
       const tab = $$('.tabs-mini button').find(b => b.dataset.mini === 'checklist');
@@ -2266,6 +2480,90 @@ function exportComissoesCsv() {
   downloadText('comissoes.csv', rows, 'text/csv;charset=utf-8');
 }
 
+
+function getDeviceId() {
+  const key = `${STORAGE_KEY}_device_id`;
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = `web-${uuid()}`;
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+function renderLicencaStatus() {
+  const el = $('#licencaStatusBox');
+  if (!el || !db?.config) return;
+  const status = db.config.licencaStatus || 'DEMO';
+  const cls = status === 'ATIVA' ? 'success' : (status === 'BLOQUEADA' || status === 'EXPIRADA' ? 'danger' : 'warning');
+  el.innerHTML = `
+    <div class="license-status ${cls}">
+      <strong>Status: ${escapeHtml(status)}</strong>
+      <span>Tenant: <code>${escapeHtml(db.config.licencaTenant || 'oficina_demo')}</code></span>
+      <span>Dispositivo: <code>${escapeHtml(db.config.licencaDeviceId || getDeviceId())}</code></span>
+      <span>Válida até: ${escapeHtml(db.config.licencaValidaAte || '-')}</span>
+      <span>Última validação: ${db.config.licencaUltimaValidacao ? formatDate(db.config.licencaUltimaValidacao) : '-'}</span>
+    </div>`;
+}
+
+async function validarLicencaProduto() {
+  const form = $('#formLicenca');
+  if (!form) return;
+  const fd = new FormData(form);
+  const apiUrl = String(fd.get('licencaApiUrl') || '').trim().replace(/\/$/, '');
+  const chave = String(fd.get('licencaChave') || '').trim();
+  const tenant = String(fd.get('licencaTenant') || 'oficina_demo').trim();
+  const deviceId = String(fd.get('licencaDeviceId') || getDeviceId()).trim();
+
+  if (!apiUrl) return toast('Informe a URL da API de licenciamento.');
+  if (!chave) return toast('Informe a chave de licença.');
+
+  try {
+    const resp = await fetch(`${apiUrl}/api/v1/licenciamento/validar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        produto: 'GESTAO_OFICINAS_PRO',
+        chave,
+        tenant,
+        deviceId,
+        cnpj: db.config.cnpj || '',
+        origem: 'PWA'
+      })
+    });
+
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok || result.valida === false) {
+      db.config.licencaStatus = result.status || 'BLOQUEADA';
+      db.config.licencaUltimaValidacao = nowIso();
+      await saveDb();
+      renderLicencaStatus();
+      return toast(result.mensagem || 'Licença inválida ou bloqueada.');
+    }
+
+    db.config = {
+      ...db.config,
+      licencaChave: chave,
+      licencaApiUrl: apiUrl,
+      licencaTenant: tenant,
+      licencaDeviceId: deviceId,
+      licencaStatus: result.status || 'ATIVA',
+      licencaValidaAte: result.validaAte || '',
+      licencaUltimaValidacao: nowIso()
+    };
+    await saveDb();
+    logAction('licenciamento', null, 'VALIDAR_LICENCA', null, { status: db.config.licencaStatus, tenant });
+    renderLicencaStatus();
+    toast('Licença validada com sucesso.');
+  } catch (err) {
+    console.error(err);
+    db.config.licencaUltimaValidacao = nowIso();
+    await saveDb();
+    renderLicencaStatus();
+    toast('Não foi possível conectar à API de licenciamento.');
+  }
+}
+
 function renderLogs() {
   const filtro = ($('#filtroLog').value || '').toLowerCase();
   const rows = db.logs.filter(l => !filtro || [l.acao,l.entidade,l.usuarioNome,l.idEntidade].some(x => String(x||'').toLowerCase().includes(filtro))).slice(0,300).map(l => `
@@ -2274,10 +2572,13 @@ function renderLogs() {
 }
 
 function renderConfig() {
-  const f = $('#formConfig');
-  Object.keys(db.config).forEach(k => {
-    if (f[k]) f[k].value = db.config[k];
+  const forms = [$('#formConfig'), $('#formLicenca')].filter(Boolean);
+  forms.forEach(f => {
+    Object.keys(db.config).forEach(k => {
+      if (f[k]) f[k].value = db.config[k];
+    });
   });
+  renderLicencaStatus();
 }
 
 function deleteEntity(collection, id, callback, logEntity = collection) {

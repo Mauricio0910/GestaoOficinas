@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oficinapro-os-v3-dashboard-veiculos';
+const CACHE_NAME = 'oficinapro-os-v10-integracao-delphi-licenciamento';
 const ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,8 @@ const ASSETS = [
   './manifest.json',
   './icon-192.svg',
   './icon-512.svg',
-  './data/vehicle-catalog.sample.json'
+  './data/vehicle-catalog.sample.json',
+  './data/inspection-catalog.sample.json'
 ];
 
 self.addEventListener('install', event => {

@@ -170,3 +170,49 @@ unzip -o gestao-oficinas-pro-inspecao-app.zip -x "oficina-os-pwa/firebase-config
 ```
 
 Ou, se substituir sem querer, cole novamente os dados do Firebase.
+
+
+## Atualização: Inspeção técnica com blueprint
+
+Esta versão corrige o salvamento da inspeção técnica, grava os dados também em `inspecaoTecnica` dentro da OS e substitui as maquetes por diagramas técnicos em SVG com fundo branco.
+
+## Atualização: Integração Delphi/SQL Server 2019 e licenciamento
+
+Esta versão adiciona uma camada de integração para o produto adicional GestãoOficinas Pro.
+
+Novos diretórios:
+
+```text
+sqlserver/
+api/gestao-oficinas-integration-api/
+delphi/
+docs/integracao-delphi-sql2019.md
+docs/licenciamento-produto-adicional.md
+docs/deploy-api-integracao.md
+```
+
+### Scripts SQL Server
+
+Execute no SQL Server 2019:
+
+```text
+sqlserver/00_schema_integracao_licenciamento.sql
+sqlserver/01_views_integracao_delphi.sql
+sqlserver/02_procedures_integracao_licenciamento.sql
+sqlserver/03_indices_recomendados.sql
+sqlserver/04_seed_licenca_demo.sql
+```
+
+### Views Delphi
+
+As views `goerp.vwGO_*` foram criadas para serem a camada estável de leitura pelo ERP Delphi.
+
+### Licenciamento
+
+No app, acesse:
+
+```text
+Configurações > Licenciamento do produto
+```
+
+Preencha a URL da API e chave da licença para validar o uso comercial.
