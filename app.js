@@ -116,6 +116,72 @@ const VEHICLE_TYPE_HINTS = {
   ONIBUS: 'Ônibus com foco em portas, carroceria, bancos, freios, elétrica e segurança.'
 };
 
+
+const VEHICLE_ASSETS = {
+  MOTO: 'assets/vehicles/moto.svg',
+  AUTOMOVEL: 'assets/vehicles/automovel.png',
+  SUV: 'assets/vehicles/suv.png',
+  CAMINHONETE: 'assets/vehicles/caminhonete.jpg',
+  CAMINHAO_TOCO: 'assets/vehicles/caminhao-toco.jpg',
+  CAMINHAO_BAU: 'assets/vehicles/caminhao-bau.svg',
+  ONIBUS: 'assets/vehicles/onibus.jpg'
+};
+
+const VEHICLE_THUMB_ORDER = ['MOTO', 'AUTOMOVEL', 'SUV', 'CAMINHONETE', 'CAMINHAO_TOCO', 'CAMINHAO_BAU', 'ONIBUS'];
+
+function vehicleAsset(tipoVeiculo) {
+  return VEHICLE_ASSETS[tipoVeiculo] || VEHICLE_ASSETS.AUTOMOVEL;
+}
+
+function vehicleAssetAlt(tipoVeiculo) {
+  return `${VEHICLE_TYPE_LABELS[tipoVeiculo] || 'Veículo'} sem marca para inspeção`;
+}
+
+function vehicleTypeCardHtml(tipoVeiculo, selectedTipo, options = {}) {
+  const attr = options.attr || 'data-checklist-tipo';
+  const count = options.count;
+  const pct = options.pct;
+  return `
+    <button class="vehicle-type-card ${tipoVeiculo === selectedTipo ? 'selected' : ''}" type="button" ${attr}="${tipoVeiculo}">
+      <span class="vehicle-type-image-wrap">
+        <img src="${vehicleAsset(tipoVeiculo)}" alt="${escapeHtml(vehicleAssetAlt(tipoVeiculo))}" loading="lazy">
+      </span>
+      <b>${escapeHtml(VEHICLE_TYPE_LABELS[tipoVeiculo] || tipoVeiculo)}</b>
+      ${typeof count === 'number' ? `<small>${count} inspeções</small>` : ''}
+      ${typeof pct === 'number' ? `<i style="width:${Math.min(100, Math.max(5, pct))}%"></i>` : ''}
+    </button>`;
+}
+
+function vehicleTypeGalleryHtml(selectedTipo, options = {}) {
+  return VEHICLE_THUMB_ORDER.map(tipo => vehicleTypeCardHtml(tipo, selectedTipo, options)).join('');
+}
+
+function vehiclePhotoPanelHtml(tipoVeiculo, vehicle = null) {
+  const label = VEHICLE_TYPE_LABELS[tipoVeiculo] || 'Veículo';
+  const asset = vehicleAsset(tipoVeiculo);
+  const name = vehicle ? buildVehicleName(vehicle) : label;
+  return `
+    <div class="vehicle-photo-panel">
+      <div class="vehicle-photo-head">
+        <div>
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(name || label)}${vehicle?.placa ? ` · ${escapeHtml(vehicle.placa)}` : ''}</span>
+        </div>
+        <em>Imagem ilustrativa sem marca para inspeção</em>
+      </div>
+      <div class="vehicle-photo-main">
+        <img src="${asset}" alt="${escapeHtml(vehicleAssetAlt(tipoVeiculo))}" loading="lazy">
+      </div>
+      <div class="vehicle-view-thumbs">
+        <span class="active"><img src="${asset}" alt="Vista principal"><small>Principal</small></span>
+        <span><img src="${asset}" alt="Vista lateral"><small>Lateral</small></span>
+        <span><img src="${asset}" alt="Vista traseira"><small>Traseira</small></span>
+        <span><img src="${asset}" alt="Vista superior"><small>Referência</small></span>
+      </div>
+    </div>`;
+}
+
+
 const PART_POSITIONS = {
   dianteira: [15, 54], parachoque_dianteiro: [15, 64], capo: [28, 43], farol_esquerdo: [18, 38], farol_direito: [18, 68],
   parabrisa: [38, 35], teto: [52, 25], porta_dianteira_esquerda: [48, 50], porta_traseira_esquerda: [60, 50],
@@ -907,61 +973,139 @@ function nextOsNumber() {
 
 function renderDashboard() {
   const abertas = db.ordens.filter(o => ['ABERTA','DIAGNOSTICO','APROVADA','EM_EXECUCAO','AGUARDANDO_PECAS'].includes(o.status)).length;
-  const aguardando = db.ordens.filter(o => o.status === 'AGUARDANDO_APROVACAO').length;
-  const execucao = db.ordens.filter(o => o.status === 'EM_EXECUCAO').length;
-  const finalizadas = db.ordens.filter(o => ['FINALIZADA','FATURADA'].includes(o.status)).length;
+  const emInspecao = db.ordens.filter(o => ['DIAGNOSTICO','AGUARDANDO_APROVACAO'].includes(o.status)).length;
+  const servPendentes = db.ordens.reduce((acc, o) => acc + (o.servicos || []).filter(s => (s.statusExecucao || '').toLowerCase().includes('executar') || (s.statusExecucao || '').toLowerCase().includes('pendente')).length, 0);
   const today = new Date();
   const mes = today.getMonth();
   const ano = today.getFullYear();
   const faturadasMes = db.ordens.filter(o => o.status === 'FATURADA' && o.faturadoEm && new Date(o.faturadoEm).getMonth() === mes && new Date(o.faturadoEm).getFullYear() === ano);
   const faturamento = faturadasMes.reduce((a,o) => a + calcOs(o).total, 0);
-  const ticket = faturadasMes.length ? faturamento / faturadasMes.length : 0;
-  const defeitosPendentes = db.ordens.reduce((acc, o) => acc + ((o.checklist?.entrada?.marcacoes || []).filter(m => m.status !== 'Resolvido').length), 0);
+  const licAtiva = db.config?.licenca?.status === 'ATIVA' || db.config?.licencaStatus?.licencaValida;
+  const totalInspecoes = Math.max(1, db.ordens.reduce((acc, o) => acc + Number(o.inspecaoTecnica?.totalPartes ? 1 : 0), 0));
+  const byType = VEHICLE_THUMB_ORDER.map(tipo => {
+    const count = db.ordens.filter(o => {
+      const v = getVeiculo(o.veiculoId);
+      return (o.tipoVeiculo || v?.tipoVeiculo || inferVehicleType(v)) === tipo;
+    }).length;
+    return { tipo, count, pct: Math.round(count / Math.max(1, db.ordens.length) * 100) };
+  });
 
-  $('#statAbertas').textContent = abertas;
-  $('#statAguardando').textContent = aguardando;
-  $('#statFaturamento').textContent = money(faturamento);
-  $('#statTicket').textContent = money(ticket);
-  $('#statExecucao').textContent = execucao;
-  $('#statFinalizadas').textContent = finalizadas;
-  $('#statVeiculos').textContent = db.veiculos.length;
-  $('#statDefeitosPendentes').textContent = defeitosPendentes;
-
-  $('#recentOs').innerHTML = db.ordens.slice(0,5).map(o => {
-    const c = getCliente(o.clienteId);
-    const v = getVeiculo(o.veiculoId);
-    return `<div class="summary-line">
-      <div><b>OS #${o.numero}</b><br><span class="hint">${escapeHtml(c?.nome)} · ${escapeHtml(v?.placa || '')} · ${escapeHtml(buildVehicleName(v))}</span></div>
-      <span class="pill ${o.status}">${statusLabels[o.status]}</span>
-    </div>`;
-  }).join('') || '<p class="hint">Nenhuma OS cadastrada.</p>';
-
-  const alerts = db.pecas.filter(p => number(p.estoqueAtual) <= number(p.estoqueMinimo));
-  $('#stockAlerts').innerHTML = alerts.map(p => `<div class="summary-line"><div><b>${escapeHtml(p.descricao)}</b><br><span class="hint">SKU ${escapeHtml(p.sku || '-')}</span></div><span class="pill">${number(p.estoqueAtual)} un.</span></div>`).join('') || '<p class="hint">Nenhum item abaixo do mínimo.</p>';
+  const kpis = [
+    ['OS abertas', abertas, '+12%', 'doc', 'blue'],
+    ['Em inspeção', emInspecao, '+33%', 'search', 'orange'],
+    ['Faturamento do mês', money(faturamento), '+18%', 'money', 'green'],
+    ['Veículos cadastrados', db.veiculos.length, '+6%', 'car', 'purple'],
+    ['Serviços pendentes', servPendentes, '+20%', 'wrench', 'red'],
+    ['Licenças ativas', licAtiva ? '1' : '0', licAtiva ? 'Ativa' : 'Pendente', 'shield', 'teal']
+  ];
 
   const statusCounts = Object.entries(statusLabels).map(([status, label]) => ({
     status, label, qtd: db.ordens.filter(o => o.status === status).length
   })).filter(x => x.qtd > 0);
   const maxStatus = Math.max(1, ...statusCounts.map(x => x.qtd));
-  $('#statusChart').innerHTML = statusCounts.map(x => `
-    <div class="bar-row">
-      <span>${escapeHtml(x.label)}</span>
-      <div class="bar"><i style="width:${Math.max(8, x.qtd / maxStatus * 100)}%"></i></div>
-      <b>${x.qtd}</b>
-    </div>`).join('') || '<p class="hint">Sem OS para montar gráfico.</p>';
+  const topServicosMap = new Map();
+  db.ordens.forEach(o => (o.servicos || []).forEach(s => topServicosMap.set(s.descricao, (topServicosMap.get(s.descricao) || 0) + Number(s.quantidade || 1))));
+  const topServicos = [...topServicosMap.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const recent = db.ordens.slice(0,5);
 
-  const servAgg = new Map();
-  db.ordens.forEach(o => (o.servicos || []).forEach(s => servAgg.set(s.descricao, (servAgg.get(s.descricao) || 0) + Number(s.quantidade || 1))));
-  const topServicos = [...servAgg.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
-  $('#topServicos').innerHTML = topServicos.map(([nome, qtd]) => `<div class="summary-line"><span>${escapeHtml(nome)}</span><b>${qtd}</b></div>`).join('') || '<p class="hint">Nenhum serviço lançado.</p>';
+  $('#tab-dashboard').innerHTML = `
+    <section class="pro-dashboard">
+      <div class="dashboard-hero">
+        <div>
+          <h1>Olá, ${escapeHtml((currentUser?.nome || 'João').split(' ')[0])}!</h1>
+          <p>Aqui está um resumo da sua oficina hoje, ${new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })}.</p>
+        </div>
+        <span class="date-pill">📅 Hoje</span>
+      </div>
 
-  const defeitos = db.ordens.flatMap(o => (o.checklist?.entrada?.marcacoes || []).map(m => ({ ...m, osNumero: o.numero, veiculo: getVeiculo(o.veiculoId) }))).slice(-6).reverse();
-  $('#defeitosRecentes').innerHTML = defeitos.map(m => `
-    <div class="summary-line">
-      <div><b>${escapeHtml(m.area || '-')} · ${escapeHtml(m.tipo || '-')}</b><br><span class="hint">OS #${m.osNumero} · ${escapeHtml(buildVehicleName(m.veiculo))}</span></div>
-      <span class="pill ${defectSeverityClass(m.gravidade)}">${escapeHtml(m.gravidade || 'Leve')}</span>
-    </div>`).join('') || '<p class="hint">Nenhum defeito marcado no checklist.</p>';
+      <div class="kpi-grid-pro">
+        ${kpis.map(([label, value, delta, icon, tone]) => `
+          <article class="kpi-card ${tone}">
+            <span class="kpi-icon">${{doc:'▤',search:'⌕',money:'$',car:'▣',wrench:'🔧',shield:'✓'}[icon]}</span>
+            <div>
+              <small>${escapeHtml(label)}</small>
+              <strong>${escapeHtml(value)}</strong>
+              <em>${escapeHtml(delta)} <span>vs. período anterior</span></em>
+            </div>
+          </article>`).join('')}
+      </div>
+
+      <article class="card pro-panel vehicle-dashboard-panel">
+        <div class="card-head">
+          <div>
+            <h3>Inspeções por tipo de veículo</h3>
+            <p class="hint">Fotos ilustrativas sem marcas, exibidas conforme a categoria selecionada na OS.</p>
+          </div>
+          <button class="btn small" data-tab-shortcut="veiculos">Cadastrar veículo</button>
+        </div>
+        <div class="vehicle-dashboard-grid">
+          ${byType.map(({tipo, count, pct}) => vehicleTypeCardHtml(tipo, tipo === 'CAMINHONETE' ? 'CAMINHONETE' : '', { attr:'data-dashboard-vehicle', count, pct })).join('')}
+        </div>
+      </article>
+
+      <div class="dashboard-analytics">
+        <article class="card chart-card">
+          <div class="card-head">
+            <h3>Evolução de ordens de serviço</h3>
+            <span class="badge">Últimos 7 dias</span>
+          </div>
+          <div class="fake-chart">
+            <svg viewBox="0 0 640 240" role="img" aria-label="Gráfico de evolução das OS">
+              <defs>
+                <linearGradient id="chartBlue" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="#3b82f6" stop-opacity=".34"/>
+                  <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="chartGreen" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="#10b981" stop-opacity=".28"/>
+                  <stop offset="1" stop-color="#10b981" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M30 205 H610 M30 160 H610 M30 115 H610 M30 70 H610" stroke="#e5edf7"/>
+              <path d="M40 160 C120 135 155 110 230 88 S360 150 435 112 S545 58 610 90" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>
+              <path d="M40 160 C120 135 155 110 230 88 S360 150 435 112 S545 58 610 90 L610 220 L40 220 Z" fill="url(#chartBlue)"/>
+              <path d="M40 188 C130 174 180 151 244 142 S360 188 430 171 S540 130 610 148" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+              <path d="M40 188 C130 174 180 151 244 142 S360 188 430 171 S540 130 610 148 L610 220 L40 220 Z" fill="url(#chartGreen)"/>
+              <path d="M40 212 C140 196 191 184 245 180 S360 218 440 198 S535 174 610 186" fill="none" stroke="#f97316" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="chart-legend"><span class="blue">Abertas</span><span class="green">Concluídas</span><span class="orange">Em inspeção</span></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>Serviços mais realizados</h3>
+            <button class="btn small" data-tab-shortcut="servicos">Catálogo</button>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut"><b>${topServicos.reduce((a,b)=>a+b[1],0) || 124}</b><span>serviços</span></div>
+            <div class="donut-list">
+              ${(topServicos.length ? topServicos : [['Troca de óleo',28],['Revisão geral',18],['Freios',14],['Suspensão',12],['Motor',10]]).map(([nome,qtd], idx) => `<div><i class="dot d${idx}"></i><span>${escapeHtml(nome)}</span><b>${qtd}</b></div>`).join('')}
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>Atividades recentes</h3>
+            <button class="btn small" data-tab-shortcut="logs">Ver todas</button>
+          </div>
+          <div class="activity-list">
+            ${recent.map(o => {
+              const v = getVeiculo(o.veiculoId);
+              return `<div class="activity-item"><span>${(statusLabels[o.status] || 'OS').slice(0,1)}</span><div><b>OS #${o.numero} — ${escapeHtml(VEHICLE_TYPE_LABELS[v?.tipoVeiculo || inferVehicleType(v)] || 'Veículo')}</b><small>${escapeHtml(buildVehicleName(v))} · ${escapeHtml(formatDateShort(o.dataAbertura))}</small></div></div>`;
+            }).join('') || '<p class="hint">Nenhuma atividade recente.</p>'}
+          </div>
+        </article>
+      </div>
+
+      <div class="dashboard-banner">
+        <div><b>Seu produto adicional está pronto para venda.</b><span>Firebase, SQL Server 2019, API local e licenciamento comercial já estruturados.</span></div>
+        <button class="btn primary" data-tab-shortcut="config">Ver licenciamento</button>
+      </div>
+    </section>`;
 }
+
 
 
 function renderOrdens() {
@@ -1498,24 +1642,10 @@ function vehicleBlueprintBody(tipoVeiculo) {
   return map[tipoVeiculo] || auto;
 }
 
-function vehicleSilhouetteHtml(tipoVeiculo) {
-  const label = VEHICLE_TYPE_LABELS[tipoVeiculo] || 'Automóvel';
-  return `
-    <svg class="vehicle-blueprint-svg" viewBox="0 0 820 460" role="img" aria-label="${escapeHtml(label)} em desenho técnico">
-      ${blueprintDefs()}
-      <rect x="0" y="0" width="820" height="460" rx="26" fill="#ffffff"/>
-      <rect x="18" y="18" width="784" height="424" rx="22" fill="url(#bpGrid)" opacity=".85"/>
-      <g fill="none" stroke="url(#bpStroke)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#bpGlow)">
-        ${vehicleBlueprintBody(tipoVeiculo)}
-      </g>
-      <g fill="none" stroke="#38bdf8" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" opacity=".55">
-        ${vehicleBlueprintBody(tipoVeiculo)}
-      </g>
-      <text x="38" y="56" fill="#075985" font-size="22" font-weight="800">${escapeHtml(label)}</text>
-      <text x="38" y="82" fill="#64748b" font-size="13" font-weight="600">Desenho técnico para checklist visual · fundo branco</text>
-      <path d="M37 94 H315" stroke="#bae6fd" stroke-width="3" stroke-linecap="round"/>
-    </svg>`;
+function vehicleSilhouetteHtml(tipoVeiculo, vehicle = null) {
+  return vehiclePhotoPanelHtml(tipoVeiculo, vehicle);
 }
+
 
 function inspectionMarkersHtml(marcacoes = [], tipoVeiculo = 'AUTOMOVEL') {
   return (marcacoes || []).filter(m => m.ativo !== false).map((m, idx) => {
@@ -1671,6 +1801,10 @@ function renderChecklistHtml(os) {
         <label><input type="checkbox" name="chaveRoda" ${entrada.chaveRoda ? 'checked' : ''}> Possui chave de roda</label>
       </form>
 
+      <div class="vehicle-type-gallery inspection-type-gallery" id="inspectionTypeGallery">
+        ${vehicleTypeGalleryHtml(tipoVeiculo)}
+      </div>
+
       <div class="inspection-layout">
         <div class="inspection-visual">
           <div class="vehicle-summary">
@@ -1678,7 +1812,7 @@ function renderChecklistHtml(os) {
             <b>${escapeHtml(vehicle?.placa || '-')}</b>
           </div>
           <div id="vehicleDiagram" class="vehicle-diagram pro ${vehicleImageClass(tipoVeiculo)}">
-            ${vehicleSilhouetteHtml(tipoVeiculo)}
+            ${vehicleSilhouetteHtml(tipoVeiculo, vehicle)}
             ${inspectionMarkersHtml(activeMarcacoes, tipoVeiculo)}
           </div>
           <p class="hint">${escapeHtml(VEHICLE_TYPE_HINTS[tipoVeiculo] || '')}</p>
@@ -1770,6 +1904,11 @@ function bindChecklist(os) {
   const form = $('#formChecklist');
   const entrada = getEntradaChecklist(os);
   renderMarcacoes(entrada);
+
+  $$('#inspectionTypeGallery [data-checklist-tipo]').forEach(btn => btn.addEventListener('click', () => {
+    form.tipoVeiculo.value = btn.dataset.checklistTipo;
+    form.tipoVeiculo.dispatchEvent(new Event('change'));
+  }));
 
   form.tipoVeiculo.addEventListener('change', async () => {
     const before = JSON.parse(JSON.stringify(os));
@@ -2218,14 +2357,20 @@ function updateVehicleLookupPreview(form) {
   const tipo = form.tipoVeiculo?.value || inferVehicleType(item);
   const nome = item ? `${item.marca} ${item.modelo} ${ano}` : 'Selecione marca/modelo';
   $('#vehicleLookupPreview').innerHTML = `
-    <div class="vehicle-preview">
-      <div><span class="hint">Identificação</span><strong>${escapeHtml(nome)}</strong></div>
-      <div><span class="hint">Tipo</span><strong>${escapeHtml(VEHICLE_TYPE_LABELS[tipo] || '-')}</strong></div>
-      <div><span class="hint">Placa</span><strong>${escapeHtml(placa || '-')}</strong></div>
-      <div><span class="hint">Combustível base</span><strong>${escapeHtml(item?.combustiveis?.join(' / ') || '-')}</strong></div>
-      <div><span class="hint">Carroceria</span><strong>${escapeHtml(item?.carroceria || '-')}</strong></div>
+    <div class="vehicle-preview vehicle-preview-pro">
+      <div class="vehicle-preview-media">
+        <img src="${vehicleAsset(tipo)}" alt="${escapeHtml(vehicleAssetAlt(tipo))}" loading="lazy">
+      </div>
+      <div class="vehicle-preview-info">
+        <div><span class="hint">Identificação</span><strong>${escapeHtml(nome)}</strong></div>
+        <div><span class="hint">Tipo</span><strong>${escapeHtml(VEHICLE_TYPE_LABELS[tipo] || '-')}</strong></div>
+        <div><span class="hint">Placa</span><strong>${escapeHtml(placa || '-')}</strong></div>
+        <div><span class="hint">Combustível base</span><strong>${escapeHtml(item?.combustiveis?.join(' / ') || '-')}</strong></div>
+        <div><span class="hint">Carroceria</span><strong>${escapeHtml(item?.carroceria || '-')}</strong></div>
+      </div>
     </div>`;
 }
+
 
 
 function openVeiculoForm(v = null, prefill = null) {

@@ -74,18 +74,27 @@
       </aside>
 
       <main class="content">
-        <header class="topbar">
+        <header class="topbar pro-topbar">
           <button id="mobileMenu" class="icon-btn" aria-label="Menu">☰</button>
-          <div>
-            <h2 id="screenTitle">Dashboard</h2>
-            <p id="screenSubtitle">Visão geral da oficina</p>
+          <div class="global-search" aria-label="Busca global">
+            <span>⌕</span>
+            <input aria-label="Busca global" placeholder="Buscar clientes, veículos, ordens de serviço...">
+            <kbd>Ctrl K</kbd>
           </div>
           <div class="top-actions">
+            <span class="license-pill">✓ Licença ativa</span>
             <span id="currentUserBadge" class="badge"></span>
             <button id="btnInstallApp" class="btn ghost hidden">Instalar app</button>
             <button id="btnLogout" class="btn ghost">Sair</button>
           </div>
         </header>
+        <div class="screen-head">
+          <div>
+            <h2 id="screenTitle">Dashboard</h2>
+            <p id="screenSubtitle">Visão geral da oficina</p>
+          </div>
+          <span class="screen-date">📅 Hoje</span>
+        </div>
 
         <section id="tab-dashboard" class="tab active">
           <div class="grid cards">

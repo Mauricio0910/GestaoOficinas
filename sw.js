@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oficinapro-os-v10-integracao-delphi-licenciamento';
+const CACHE_NAME = 'gestao-oficinas-pro-redesign-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,14 @@ const ASSETS = [
   './icon-192.svg',
   './icon-512.svg',
   './data/vehicle-catalog.sample.json',
-  './data/inspection-catalog.sample.json'
+  './data/inspection-catalog.sample.json',
+  './assets/vehicles/automovel.png',
+  './assets/vehicles/suv.png',
+  './assets/vehicles/caminhonete.jpg',
+  './assets/vehicles/caminhao-toco.jpg',
+  './assets/vehicles/caminhao-bau.svg',
+  './assets/vehicles/onibus.jpg',
+  './assets/vehicles/moto.svg'
 ];
 
 self.addEventListener('install', event => {
